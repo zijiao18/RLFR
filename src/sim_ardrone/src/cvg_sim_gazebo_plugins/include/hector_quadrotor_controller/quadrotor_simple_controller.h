@@ -25,7 +25,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
-
 /*
 * quadrotor motion controller:
 *
@@ -40,6 +39,13 @@
 * Author: Hongrong huang
 *
 *
+* Edited on: Apr 21, 2019, by Zilong Jiao
+* 
+* The simulator is revised as an emulator for training reinforcement learning methods. 
+* Modifications: 
+*   - isolate ros-topics of a robot with its namespace for mutli-robot simulation
+*   - restrict a robot to have only FLYING_MODEL for collision avoidance research
+*   - revised reset function to incorporate the modification in robot state
 */
 
 #ifndef HECTOR_GAZEBO_PLUGINS_QUADROTOR_SIMPLE_CONTROLLER_H
@@ -101,10 +107,6 @@ private:
   ros::Subscriber navdata_subscriber_;
   unsigned int navi_state;
   //***********************************
-  
-  // void CallbackQueueThread();
-  // boost::mutex lock_;
-  // boost::thread callback_queue_thread_;
 
   geometry_msgs::Twist velocity_command_;
   // callback functions for subscribers
@@ -118,10 +120,7 @@ private:
   math::Pose pose;
   math::Vector3 euler, velocity, acceleration, angular_velocity;
 
-  //std::string link_name_;
-  //std::string namespace_;
   std::string robot_namespace_;
-  //std::string node_namespace_;
   std::string velocity_topic_;
   std::string imu_topic_;
   std::string state_topic_;

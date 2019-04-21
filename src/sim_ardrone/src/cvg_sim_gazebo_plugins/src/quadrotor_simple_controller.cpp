@@ -38,7 +38,13 @@
 * Created on: Oct 22, 2012
 * Author: Hongrong huang
 *
-*
+* Edited on: Apr 21, 2019, by Zilong Jiao
+* 
+* The simulator is revised as an emulator for training reinforcement learning methods. 
+* Modifications: 
+*   - isolate ros-topics of a robot with its namespace for mutli-robot simulation
+*   - restrict a robot to have only FLYING_MODEL for collision avoidance research
+*   - revised reset function to incorporate the modification in robot state
 */
 #include <hector_quadrotor_controller/quadrotor_simple_controller.h>
 #include "gazebo/common/Events.hh"
@@ -178,7 +184,6 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
 
     ROS_INFO_NAMED("quadrotor_simple_controller", "Using state information on topic %s as source of state information.", state_topic_.c_str());
   }
-  // callback_queue_thread_ = boost::thread( boost::bind( &GazeboQuadrotorSimpleController::CallbackQueueThread,this ) );
 
   Reset();
 
