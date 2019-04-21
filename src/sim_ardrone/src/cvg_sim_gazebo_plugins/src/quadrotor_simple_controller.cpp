@@ -122,7 +122,6 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
   else
     motion_drift_noise_time_ = _sdf->GetElement("motionDriftNoiseTime")->Get<double>();
 
-
   controllers_.roll.Load(_sdf, "rollpitch");
   controllers_.pitch.Load(_sdf, "rollpitch");
   controllers_.yaw.Load(_sdf, "yaw");
@@ -220,6 +219,8 @@ void GazeboQuadrotorSimpleController::VelocityCallback(const geometry_msgs::Twis
   velocity_command_.linear.y += drift_noise[1] + 2*motion_small_noise_*(drand48()-0.5);
   velocity_command_.linear.z += drift_noise[2] + 2*motion_small_noise_*(drand48()-0.5);
   velocity_command_.angular.z += drift_noise[3] + 2*motion_small_noise_*(drand48()-0.5);
+//  velocity_command_.angular.z *= 2;
+
 }
 
 void GazeboQuadrotorSimpleController::ImuCallback(const sensor_msgs::ImuConstPtr& imu)

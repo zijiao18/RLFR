@@ -126,7 +126,6 @@ private:
   //bool toggleCamCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
   bool toggleNavdataDemoCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
   bool setLedAnimationCallback(ardrone_autonomy::LedAnim::Request& request, ardrone_autonomy::LedAnim::Response& response);
-  std::vector<float> getStateRewardForPycontroller(math::Vector3& lvel,math::Vector3& avel,std::vector<float>& ranges,math::Pose& pose,bool collided);
 
   ros::Time state_stamp;
   bool state_reset;
@@ -155,19 +154,13 @@ private:
   std::string state_topic_;
   std::string lidar_topic_;
 
-  std::string pycontroller_topic;
-
-
   // extra parameters for robot control.
   bool m_isFlying;
   bool m_takeoff;
   bool m_drainBattery;
-  bool m_collided;
-  bool m_reply_pycontroller;
   double m_batteryPercentage;
   double m_maxFlightTime;
   double m_timeAfterTakeOff;
-  ros::Publisher pycontrollerPub;
   
   //***********************************
 
