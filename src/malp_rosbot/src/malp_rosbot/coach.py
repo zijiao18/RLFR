@@ -178,7 +178,6 @@ class Coach():
 
 
 	def train(self):
-		#np.set_printoptions(threshold=np.nan)
 		wi=0
 		while not rospy.is_shutdown():
 			try:

@@ -4,7 +4,6 @@ import random as rand
 from collections import deque
 import threading
 
-#the environment state of a robot
 class State():
 	def __init__(self,goal,pose,index,
 				pos_dim,vel_dim,

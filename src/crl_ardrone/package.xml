@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>delay_ardrone</name>
+  <name>crl_ardrone</name>
   <version>0.0.0</version>
-  <description>The reinforcement learning method considering control delay
-    for learning colision avoidance policy for an ardrone 2.0</description>
+  <description>The curriculum reinforcement learning method 
+  	for learning collision avoidance policy for a single robot</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

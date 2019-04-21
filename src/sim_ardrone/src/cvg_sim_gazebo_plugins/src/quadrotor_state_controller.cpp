@@ -164,7 +164,7 @@ void GazeboQuadrotorStateController::Load(physics::ModelPtr _model, sdf::Element
     m_navdataPub = node_handle_->advertise< ardrone_autonomy::Navdata >(robot_namespace_+navdata_topic_ , 25 );
     m_navdatarawPub = node_handle_->advertise< ardrone_autonomy::navdata_raw_measures >(robot_namespace_+navdataraw_topic_ , 25 );
 
-    pycontrollerPub = node_handle_->advertise<std_msgs::Float32MultiArray>(robot_namespace_+pycontroller_topic,1000);
+    pycontrollerPub = node_handle_->advertise<std_msgs::Float32MultiArray>(robot_namespace_+pycontroller_topic,25);
 
 
   // subscribe imu
@@ -216,7 +216,7 @@ void GazeboQuadrotorStateController::Load(physics::ModelPtr _model, sdf::Element
 
   // for camera control
   // switch camera server
-  /*std::string toggleCam_topic  = "togglecam";
+  std::string toggleCam_topic  = "togglecam";
   ros::AdvertiseServiceOptions toggleCam_ops = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
     toggleCam_topic,
     boost::bind(&GazeboQuadrotorStateController::toggleCamCallback, this, _1,_2),
@@ -262,7 +262,7 @@ void GazeboQuadrotorStateController::Load(physics::ModelPtr _model, sdf::Element
     boost::bind(&GazeboQuadrotorStateController::CameraInfoBottomCallback, this, _1),
     ros::VoidPtr(), &callback_queue_);
   camera_info_bottom_subscriber_ = node_handle_->subscribe(cam_info_bottom_ops);
-  */
+  
   // callback_queue_thread_ = boost::thread( boost::bind( &GazeboQuadrotorStateController::CallbackQueueThread,this ) );
 
   robot_current_state = FLYING_MODEL; //was LANDED_MODEL
@@ -305,7 +305,10 @@ void GazeboQuadrotorStateController::LidarCallback(const sensor_msgs::LaserScanC
   for(double r : lidar_info->ranges){
   	if(r_min>r) r_min=r;
   }
-  m_collided = ((r_min<0.5) || (robot_altitude<0.1));
+  m_collided = ((r_min < 0.3) || 
+                (robot_altitude < 0.3 
+                  && robot_current_state != LANDING_MODEL
+                  && robot_current_state != LANDED_MODEL));
   laser_ranges.clear();
   laser_ranges = (lidar_info->ranges);
 }
@@ -365,19 +368,6 @@ void GazeboQuadrotorStateController::Update()
   math::Vector3 acceleration_xy = heading_quaternion.RotateVectorReverse(acceleration);
   math::Vector3 angular_velocity_body = pose.rot.RotateVectorReverse(angular_velocity);
 
-  //send back the current state of the robots after revieving the motion command.
-  //this state is the state where the recieved motion command is executed.
-  //see the notes in the python controller.
-  if(m_reply_pycontroller && (sim_time-velcmd_time).Double()>=0.1){//delay the reply for 1 second
-    std_msgs::Float32MultiArray state_reward;
-    math::Pose cur_pose=link->GetWorldPose();
-    state_reward.data=getStateRewardForPycontroller(velocity,angular_velocity,laser_ranges,cur_pose,m_collided);
-    pycontrollerPub.publish(state_reward); 
-    m_reply_pycontroller=false;
-    if (m_collided){ 
-      ROS_INFO("%s Collided",robot_namespace_.c_str());
-    }
-  }
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
   
   // process robot operation information
@@ -575,7 +565,9 @@ void GazeboQuadrotorStateController::TakeoffCallback(const std_msgs::EmptyConstP
 
 void GazeboQuadrotorStateController::LandCallback(const std_msgs::EmptyConstPtr& msg)
 {
-  if((robot_current_state == FLYING_MODEL)||(robot_current_state == TO_FIX_POINT_MODEL)||(robot_current_state == TAKINGOFF_MODEL))
+  if((robot_current_state == FLYING_MODEL)
+      || (robot_current_state == TO_FIX_POINT_MODEL)
+      || (robot_current_state == TAKINGOFF_MODEL))
   {
     m_isFlying = false;
     m_takeoff = false;
@@ -590,30 +582,6 @@ void GazeboQuadrotorStateController::ResetCallback(const std_msgs::EmptyConstPtr
   state_reset=true;
 }
 
-std::vector<float> GazeboQuadrotorStateController::getStateRewardForPycontroller(math::Vector3& lvel,math::Vector3& avel,
-                                                            std::vector<float>& ranges, math::Pose& pose, bool collided){
-  //simply concatinate all the input together in the format: <collided,cur_lvel,cur_avel,cur_pos,cur_ranges>
-  std::vector<float> data;
-  data.push_back(float(int(collided)));
-  data.push_back(float(lvel[0]));
-  data.push_back(float(lvel[1]));
-  data.push_back(float(lvel[2]));
-  data.push_back(float(avel[0]));
-  data.push_back(float(avel[1]));
-  data.push_back(float(avel[2]));
-  data.push_back(float(pose.pos.x));
-  data.push_back(float(pose.pos.y));
-  data.push_back(float(pose.pos.z));
-  data.push_back(float(pose.rot.GetRoll()));
-  data.push_back(float(pose.rot.GetPitch()));
-  data.push_back(float(pose.rot.GetYaw()));
-  for(float r:ranges){
-    data.push_back(r);
-  }
-  return data;
-}
-
-/*
 bool GazeboQuadrotorStateController::toggleCamCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
   if(m_selected_cam_num==0)
@@ -623,32 +591,32 @@ bool GazeboQuadrotorStateController::toggleCamCallback(std_srvs::Empty::Request&
 
   ROS_INFO("\nSetting camera channel to : %d.\n", m_selected_cam_num);
   return true;
-}*/
+}
 
-/*void GazeboQuadrotorStateController::CameraFrontCallback(const sensor_msgs::ImageConstPtr& image)
+void GazeboQuadrotorStateController::CameraFrontCallback(const sensor_msgs::ImageConstPtr& image)
 {
   if(m_selected_cam_num==0)
     camera_publisher_.publish(image);
-}*/
+}
 
-/*void GazeboQuadrotorStateController::CameraBottomCallback(const sensor_msgs::ImageConstPtr& image)
+void GazeboQuadrotorStateController::CameraBottomCallback(const sensor_msgs::ImageConstPtr& image)
 {
   if(m_selected_cam_num==1)
     camera_publisher_.publish(image);
-}*/
+}
 
-/*void GazeboQuadrotorStateController::CameraInfoFrontCallback(const sensor_msgs::CameraInfoConstPtr&  image_info)
+void GazeboQuadrotorStateController::CameraInfoFrontCallback(const sensor_msgs::CameraInfoConstPtr&  image_info)
 {
   if(m_selected_cam_num==0)
     camera_info_publisher_.publish(image_info);
-}*/
+}
 
-/*void GazeboQuadrotorStateController::CameraInfoBottomCallback(const sensor_msgs::CameraInfoConstPtr&  image_info)
+void GazeboQuadrotorStateController::CameraInfoBottomCallback(const sensor_msgs::CameraInfoConstPtr&  image_info)
 {
   if(m_selected_cam_num==1)
     camera_info_publisher_.publish(image_info);
 
-}*/
+}
 
 // Register this plugin with the simulator
 GZ_REGISTER_MODEL_PLUGIN(GazeboQuadrotorStateController)

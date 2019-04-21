@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>delay_ardrone</name>
+  <name>crl_rosbot</name>
   <version>0.0.0</version>
-  <description>The reinforcement learning method considering control delay
-    for learning colision avoidance policy for an ardrone 2.0</description>
+  <description>The curriculum reinforcement learning method for 
+  	a learning collision avoidance policy for a rosbot (i.e. a husarian robot)</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
@@ -20,7 +20,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/delay_rl_ardrone</url> -->
+  <!-- <url type="website">http://wiki.ros.org/delay_rl_rosbot</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->

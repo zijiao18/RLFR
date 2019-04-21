@@ -2,59 +2,59 @@
 import tensorflow as tf
 import rospy
 import numpy as np
+import datetime
 from malp_rosbot.ddpg_network import ActorNetwork
 from malp_rosbot.ddpg_network import CriticNetwork
 from malp_rosbot.coach import Coach
 
+vel_dim=3#(x,y,yaw), do not change
+pos_dim=2#(x,y), do not change
+act_dim=2#(lv,av), do not change
+obs_dim=180
+obs_seqlen=4
+batch_size=256
+actor_lstm_state_dim=128
+critic_lstm_state_dim=128
+actor_fc1_unit=1024
+actor_fc2_unit=1024
+actor_fc3_unit=1024
+critic_fc1_unit=2048
+critic_fc2_unit=2048
+critic_fc3_unit=2048
+actor_lr=0.0001
+critic_lr=0.0001
+actor_tau=0.01
+critic_tau=0.01
+
+init_pose_c0=np.array([[[0.0,1.5,0.0,0,0,-1.57]],
+					[[-1.5,0.0,0.0,0,0,0.0]],
+					[[1.5,0.0,0.0,0,0,3.14]]],dtype=float)
+
+init_pose_c1=np.array([[[0.0,-4.5,0.0,0,0,-1.57]],
+					[[-1.5,-6.0,0.0,0,0,0.0]],
+					[[1.5,-6.0,0.0,0,0,3.14]]],dtype=float)
+
+init_pose_c2=np.array([[[0.0,7.5,0.0,0,0,-1.57]],
+					[[-1.5,6.0,0.0,0,0,0.0]],
+					[[1.5,6.0,0.0,0,0,3.14]]],dtype=float)
+
+goals_c0=np.array([[[0,-1.5]],
+				[[1.5,0.0]],
+				[[-1.5,0.0]]],dtype=float)
+
+goals_c1=np.array([[[0,-7.5]],
+				[[1.5,-6.0]],
+				[[-1.5,-6.0]]],dtype=float)
+
+goals_c2=np.array([[[0,4.5]],
+				[[1.5,6.0]],
+				[[-1.5,6.0]]],dtype=float)
+
 if __name__ == '__main__':
-	rospy.init_node("mamg_node")
-	
-	vel_dim=3#(x,y,yaw), do not change
-	pos_dim=2#(x,y), do not change
-	act_dim=2#(lv,av), do not change
-	obs_dim=180
-	obs_seqlen=4
-	batch_size=256
-	actor_lstm_state_dim=128
-	critic_lstm_state_dim=128
-	actor_fc1_unit=1024
-	actor_fc2_unit=1024
-	actor_fc3_unit=1024
-	critic_fc1_unit=2048
-	critic_fc2_unit=2048
-	critic_fc3_unit=2048
-	actor_lr=0.0001
-	critic_lr=0.0001
-	actor_tau=0.01
-	critic_tau=0.01
-
-	init_pose_c0=np.array([[[0.0,2.0,0.0,0,0,-1.57]],
-						[[-2.0,0.0,0.0,0,0,0.0]],
-						[[2.0,0.0,0.0,0,0,3.14]]],dtype=float)
-
-	init_pose_c1=np.array([[[0.0,-4.5,0.0,0,0,-1.57]],
-						[[-1.5,-6.0,0.0,0,0,0.0]],
-						[[1.5,-6.0,0.0,0,0,3.14]]],dtype=float)
-
-	init_pose_c2=np.array([[[0.0,7.5,0.0,0,0,-1.57]],
-						[[-1.5,6.0,0.0,0,0,0.0]],
-						[[1.5,6.0,0.0,0,0,3.14]]],dtype=float)
-
-	goals_c0=np.array([[[0,-2.0]],
-					[[2.0,0.0]],
-					[[-2.0,0.0]]],dtype=float)
-
-	goals_c1=np.array([[[0,-7.5]],
-					[[1.5,-6.0]],
-					[[-1.5,-6.0]]],dtype=float)
-
-	goals_c2=np.array([[[0,4.5]],
-					[[1.5,6.0]],
-					[[-1.5,6.0]]],dtype=float)
-
-
+	rospy.init_node("malp_rosbot_node")
+	exp_timestamp = datetime.datetime.now().strftime("%d-%m-%Y %I:%M:%S%p")
 	sess=tf.Session()
-	tb_writer=tf.summary.FileWriter('/media/zilong/Backup/RLCA/src/malp_rosbot/save/tbsum')
+	tb_writer=tf.summary.FileWriter('/media/zilong/Backup/RLCA/save/malp_rosbot/tbsum/'+exp_timestamp)
 
 	master_actor=ActorNetwork(sess=sess,
 							name='master_actor',
@@ -184,7 +184,7 @@ if __name__ == '__main__':
 		c2.start()
 		rospy.spin()
 	finally:
-		saver.save(sess,'/media/zilong/Backup/RLCA/src/mamg/save/models/model.ckpt')
-		print("mamg_node terminated...")
+		saver.save(sess,'/media/zilong/Backup/RLCA/save/malp_rosbot/models/'+exp_timestamp+'/model.ckpt')
+		print("malp_rosbot_node terminated...")
 		
 		

@@ -266,43 +266,37 @@ class CriticNetwork():
 		joint_dir_in=tf.concat([dir0_in,dir1_in,dir2_in],2)
 		joint_act_in=tf.concat([act0_in,act1_in,act2_in],2)
 
-		lstm0_in = tf.reverse(obs0_in,[0])
-		lstm0 = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)	#lstm_state_size=8
-		h0,c0=tf.nn.static_rnn(cell=lstm0,
-							inputs=tf.unstack(lstm0_in),
-							dtype=tf.float32,
-							scope=rnn_scope+'0')
+		lstm = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)
 
-		lstm1_in = tf.reverse(obs1_in,[0])
-		lstm1 = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)	#lstm_state_size=8
-		h1,c1=tf.nn.static_rnn(cell=lstm1,
-							inputs=tf.unstack(lstm1_in),
+		lstm_in_0 = tf.reverse(obs0_in,[0])	
+		h0,c0=tf.nn.static_rnn(cell=lstm,
+							inputs=tf.unstack(lstm_in_0),
 							dtype=tf.float32,
-							scope=rnn_scope+'1')
+							scope=rnn_scope)
 
-		lstm2_in = tf.reverse(obs2_in,[0])
-		lstm2 = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)	#lstm_state_size=8
-		h2,c2=tf.nn.static_rnn(cell=lstm2,
-							inputs=tf.unstack(lstm2_in),
+		lstm_in_1 = tf.reverse(obs1_in,[0])	
+		h1,c1=tf.nn.static_rnn(cell=lstm,
+							inputs=tf.unstack(lstm_in_1),
 							dtype=tf.float32,
-							scope=rnn_scope+'2')
+							scope=rnn_scope)
 
-		#h=tf.Print(h,[h[-1]],"cri_h")
+		lstm_in_2 = tf.reverse(obs2_in,[0])	
+		h2,c2=tf.nn.static_rnn(cell=lstm,
+							inputs=tf.unstack(lstm_in_2),
+							dtype=tf.float32,
+							scope=rnn_scope)
+
 		fc1_in=tf.concat([h0[-1],h1[-1],h2[-1],joint_dir_in[0,:,:],joint_act_in[0,:,:],ind_in[0,:,:]],1)
-		#fc1_in=tf.concat([h0[-1],h1[-1],h2[-1],joint_vel_in[0,:,:],joint_dir_in[0,:,:],joint_act_in[0,:,:],ind_in[0,:,:]],1)
-		#input_fc1=tf.Print(input_fc1,[input_fc1[0,:]],"input_fc1")
 		fc1=tf.layers.dense(inputs=fc1_in,
 							units=self.fc1_size,
 							activation=tf.nn.relu,
 							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
-		#fc1=tf.Print(fc1,[fc1],"cri_fc1")
 		fc2=tf.layers.dense(inputs=fc1,
 							units=self.fc2_size,
 							activation=tf.nn.relu,
 							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
-		#fc2=tf.Print(fc2,[fc2],"cri_fc2")
 		fc3 = tf.layers.dense(inputs=fc2,
 							units=self.fc3_size,
 							activation=tf.nn.relu,
@@ -313,7 +307,6 @@ class CriticNetwork():
 							activation=None,
 							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
-		#q_out=tf.Print(q_out,[q_out],"q_out")
 		return (obs0_in,obs1_in,obs2_in,
 				dir0_in,dir1_in,dir2_in,
 				act0_in,act1_in,act2_in,

@@ -2,7 +2,7 @@
 <launch>
   <!-- Include the world -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find malp_rosbot)/worlds/train_ma_mix.world"/>
+    <arg name="world_name" value="$(find malp_rosbot)/worlds/train_ma_mix_2.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
@@ -21,7 +21,7 @@
           args="-param robot_description
                 -urdf
                 -x 0.0 
-                -y 2.0
+                -y 1.5
                 -z 0
                 -R 0
                 -P 0 
@@ -37,7 +37,7 @@
     <node name="spawn_robot_rosbot1" pkg="gazebo_ros" type="spawn_model"
           args="-param robot_description
                 -urdf
-                -x -2.0
+                -x -1.5
                 -y 0.0
                 -z 0
                 -R 0
@@ -53,7 +53,7 @@
     <node name="spawn_robot_rosbot2" pkg="gazebo_ros" type="spawn_model"
           args="-param robot_description
                 -urdf
-                -x 2.0 
+                -x 1.5 
                 -y 0
                 -z 0
                 -R 0
