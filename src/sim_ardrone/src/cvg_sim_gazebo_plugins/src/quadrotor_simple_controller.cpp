@@ -98,7 +98,7 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
   link=_model->GetChildLink("base_link");
   if (!link)
   {
-    ROS_FATAL("gazebo_ros_baro plugin error: bodyName: %s does not exist\n", link_name_.c_str());
+    ROS_FATAL("gazebo_ros_baro plugin error: bodyName does not exist\n");
     return;
   }
 
@@ -133,7 +133,7 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
   inertia = link->GetInertial()->GetPrincipalMoments();
   mass = link->GetInertial()->GetMass();
 
-  node_handle_ = new ros::NodeHandle(namespace_);
+  node_handle_ = new ros::NodeHandle(robot_namespace_);
 
   // subscribe command: velocity control command
   if (!velocity_topic_.empty())

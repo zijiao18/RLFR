@@ -77,7 +77,6 @@ private:
   ros::Subscriber velocity_subscriber_;
   ros::Subscriber imu_subscriber_;
   ros::Subscriber sonar_subscriber_;
-  ros::Subscriber lidar_subscriber_;
   ros::Subscriber state_subscriber_;
 
   // extra robot control command
@@ -90,15 +89,15 @@ private:
   
 
   // extra camera control command
-  int                              m_selected_cam_num;
-  ros::ServiceServer               toggleCam_service;
-  ros::Subscriber                  camera_info_front_subscriber_;
-  ros::Subscriber                  camera_info_bottom_subscriber_;
-  ros::Publisher                   camera_info_publisher_;
-  image_transport::ImageTransport* camera_it_;
-  image_transport::Subscriber      camera_front_subscriber_;
-  image_transport::Subscriber      camera_bottom_subscriber_;
-  image_transport::Publisher       camera_publisher_;
+  //int                              m_selected_cam_num;
+  //ros::ServiceServer               toggleCam_service;
+  //ros::Subscriber                  camera_info_front_subscriber_;
+  //ros::Subscriber                  camera_info_bottom_subscriber_;
+  //ros::Publisher                   camera_info_publisher_;
+  //image_transport::ImageTransport* camera_it_;
+  //image_transport::Subscriber      camera_front_subscriber_;
+  //image_transport::Subscriber      camera_bottom_subscriber_;
+  //image_transport::Publisher       camera_publisher_;
 
   //***********************************
   
@@ -114,7 +113,7 @@ private:
   void ResetCallback(const std_msgs::EmptyConstPtr&);
   void ImuCallback(const sensor_msgs::ImuConstPtr&);
   void SonarCallback(const sensor_msgs::RangeConstPtr&);
-  void LidarCallback(const sensor_msgs::LaserScanConstPtr&);
+  //void LidarCallback(const sensor_msgs::LaserScanConstPtr&);
   void StateCallback(const nav_msgs::OdometryConstPtr&);
   //void CameraFrontCallback(const sensor_msgs::ImageConstPtr&);
   //void CameraBottomCallback(const sensor_msgs::ImageConstPtr&);
@@ -132,7 +131,6 @@ private:
   math::Pose pose;
   math::Vector3 euler, velocity, acceleration, angular_velocity;
   double robot_altitude;
-  std::vector<float> laser_ranges;
   // 0: Unknown, 1: Init, 2: Landed, 3: Flying, 4: Hovering, 5: Test
   // 6: Taking off, 7: Goto Fix Point, 8: Landing, 9: Looping
   // Note: 3,7 seems to discriminate type of flying (isFly = 3 | 7)

@@ -29,7 +29,7 @@ GazeboQuadrotorStateController::GazeboQuadrotorStateController()
   m_batteryPercentage = 100;
   m_maxFlightTime     = 1200;
   m_timeAfterTakeOff  = 0;
-  m_selected_cam_num  = 0;
+  //m_selected_cam_num  = 0;
   state_reset         = false;
 }
 
@@ -82,7 +82,7 @@ void GazeboQuadrotorStateController::Load(physics::ModelPtr _model, sdf::Element
     navdata_topic_ = _sdf->GetElement("navdataTopic")->Get<std::string>();
 
   if (!_sdf->HasElement("navdatarawTopic"))
-    navdataraw_topic_ = "/ardrone/navdata_raw_measures";
+    navdataraw_topic_ = "navdata_raw_measures";
   else
     navdataraw_topic_ = _sdf->GetElement("navdatarawTopic")->Get<std::string>();
 
@@ -183,17 +183,6 @@ void GazeboQuadrotorStateController::Load(physics::ModelPtr _model, sdf::Element
     ROS_INFO_NAMED("quadrotor_state_controller", "Using sonar information on topic %s as source of altitude.", sonar_topic_.c_str());
   }
 
-  // subscribe lidar senor info
-  if (!lidar_topic_.empty())
-  {
-    ros::SubscribeOptions ops = ros::SubscribeOptions::create<sensor_msgs::LaserScan>(
-      robot_namespace_+lidar_topic_, 1,
-      boost::bind(&GazeboQuadrotorStateController::LidarCallback, this, _1),
-      ros::VoidPtr(), &callback_queue_);
-    lidar_subscriber_ = node_handle_->subscribe(ops);
-    ROS_INFO_NAMED("quadrotor_state_controller", "Using lidar information on topic %s as source of collision detection.", lidar_topic_.c_str());
-  }
-
   // subscribe state
   if (!state_topic_.empty())
   {
@@ -208,36 +197,36 @@ void GazeboQuadrotorStateController::Load(physics::ModelPtr _model, sdf::Element
 
   // for camera control
   // switch camera server
-  /*std::string toggleCam_topic  = "togglecam";
-  ros::AdvertiseServiceOptions toggleCam_ops = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
-    toggleCam_topic,
-    boost::bind(&GazeboQuadrotorStateController::toggleCamCallback, this, _1,_2),
-    ros::VoidPtr(),
-    &callback_queue_);
+  //std::string toggleCam_topic  = "togglecam";
+  //ros::AdvertiseServiceOptions toggleCam_ops = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
+  //  toggleCam_topic,
+  //  boost::bind(&GazeboQuadrotorStateController::toggleCamCallback, this, _1,_2),
+  //  ros::VoidPtr(),
+  //  &callback_queue_);
 
-  toggleCam_service = node_handle_->advertiseService(toggleCam_ops);
-
-  // camera image data
-  std::string cam_out_topic  = "image_raw";
-  std::string cam_front_in_topic = "front/image_raw";
-  std::string cam_bottom_in_topic = "bottom/image_raw";
-  std::string in_transport = "raw";
-
-  camera_it_ = new image_transport::ImageTransport(*node_handle_);
-  camera_publisher_ = camera_it_->advertise(cam_out_topic, 1);
-
-  camera_front_subscriber_ = camera_it_->subscribe(
-    cam_front_in_topic, 1,
-    boost::bind(&GazeboQuadrotorStateController::CameraFrontCallback, this, _1),
-    ros::VoidPtr(), in_transport);
-
-  camera_bottom_subscriber_ = camera_it_->subscribe(
-    cam_bottom_in_topic, 1,
-    boost::bind(&GazeboQuadrotorStateController::CameraBottomCallback, this, _1),
-    ros::VoidPtr(), in_transport);
+  //toggleCam_service = node_handle_->advertiseService(toggleCam_ops);
 
   // camera image data
-  std::string cam_info_out_topic  = "camera_info";
+  //std::string cam_out_topic  = "image_raw";
+  //std::string cam_front_in_topic = "front/image_raw";
+  //std::string cam_bottom_in_topic = "bottom/image_raw";
+  //std::string in_transport = "raw";
+
+  //camera_it_ = new image_transport::ImageTransport(*node_handle_);
+  //camera_publisher_ = camera_it_->advertise(cam_out_topic, 1);
+
+  //camera_front_subscriber_ = camera_it_->subscribe(
+  //  cam_front_in_topic, 1,
+  //  boost::bind(&GazeboQuadrotorStateController::CameraFrontCallback, this, _1),
+  //  ros::VoidPtr(), in_transport);
+
+  //camera_bottom_subscriber_ = camera_it_->subscribe(
+  //  cam_bottom_in_topic, 1,
+  //  boost::bind(&GazeboQuadrotorStateController::CameraBottomCallback, this, _1),
+  //  ros::VoidPtr(), in_transport);
+
+  // camera image data
+  /*std::string cam_info_out_topic  = "camera_info";
   std::string cam_info_front_in_topic = "front/camera_info";
   std::string cam_info_bottom_in_topic = "bottom/camera_info";
 
@@ -253,8 +242,8 @@ void GazeboQuadrotorStateController::Load(physics::ModelPtr _model, sdf::Element
     cam_info_bottom_in_topic, 1,
     boost::bind(&GazeboQuadrotorStateController::CameraInfoBottomCallback, this, _1),
     ros::VoidPtr(), &callback_queue_);
-  camera_info_bottom_subscriber_ = node_handle_->subscribe(cam_info_bottom_ops);
-  */
+  camera_info_bottom_subscriber_ = node_handle_->subscribe(cam_info_bottom_ops);*/
+  
   // callback_queue_thread_ = boost::thread( boost::bind( &GazeboQuadrotorStateController::CallbackQueueThread,this ) );
 
   robot_current_state = FLYING_MODEL; //was LANDED_MODEL
@@ -287,12 +276,6 @@ void GazeboQuadrotorStateController::ImuCallback(const sensor_msgs::ImuConstPtr&
 void GazeboQuadrotorStateController::SonarCallback(const sensor_msgs::RangeConstPtr& sonar_info)
 {
   robot_altitude = sonar_info->range;
-}
-
-void GazeboQuadrotorStateController::LidarCallback(const sensor_msgs::LaserScanConstPtr& lidar_info)
-{
-  laser_ranges.clear();
-  laser_ranges = (lidar_info->ranges);
 }
 
 void GazeboQuadrotorStateController::StateCallback(const nav_msgs::OdometryConstPtr& state)

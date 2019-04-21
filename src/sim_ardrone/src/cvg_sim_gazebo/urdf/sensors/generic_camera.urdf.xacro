@@ -8,7 +8,7 @@ xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
   
     <property name="M_PI" value="3.1415926535897931" />
   
-    <xacro:macro name="generic_camera" params="name sim_name parent *origin update_rate res_x res_y image_format hfov">
+    <xacro:macro name="generic_camera" params="name parent *origin update_rate res_x res_y image_format hfov">
       <joint name="${name}_joint" type="fixed">
         <insert_block name="origin" />
         <parent link="${parent}"/>
@@ -26,9 +26,9 @@ xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
           <geometry>
             <box size="0.01 0.01 0.01" />
           </geometry>
-	  <material name="Blue">
-      <color rgba="0.0 0.0 0.8 1"/>
-    </material>
+    	  <material name="Blue">
+          <color rgba="0.0 0.0 0.8 1"/>
+        </material>
         </visual>
         <collision>
           <origin xyz="0 0 0" rpy="0 0 0" />
@@ -79,16 +79,16 @@ xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
           </image>
 
           <clip>0.01
-	    <near>0.01</near>
+	         <near>0.01</near>
             <far>100</far>
           </clip>
         </camera>
         <plugin name="${name}_camera_controller" filename="libgazebo_ros_camera.so">
-	  <cameraName>/${sim_name}/${name}</cameraName>
+	      <cameraName>${name}</cameraName>
           <alwaysOn>true</alwaysOn>
           <updateRate>${update_rate}</updateRate>
-          <imageTopicName>${sim_name}/${name}/image_raw</imageTopicName>
-          <cameraInfoTopicName>${sim_name}/${name}/camera_info</cameraInfoTopicName>
+          <imageTopicName>image_raw</imageTopicName>
+          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
           <frameName>ardrone_base_${name}cam</frameName>
         </plugin>
       </sensor>

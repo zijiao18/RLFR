@@ -118,10 +118,10 @@ private:
   math::Pose pose;
   math::Vector3 euler, velocity, acceleration, angular_velocity;
 
-  std::string link_name_;
-  std::string namespace_;
+  //std::string link_name_;
+  //std::string namespace_;
   std::string robot_namespace_;
-  std::string node_namespace_;
+  //std::string node_namespace_;
   std::string velocity_topic_;
   std::string imu_topic_;
   std::string state_topic_;
