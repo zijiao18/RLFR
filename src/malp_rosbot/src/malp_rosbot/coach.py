@@ -14,6 +14,8 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from ddpg_network import ActorNetwork
 from ddpg_network import CriticNetwork
+#from ddpg_network_no_lstm import ActorNetwork
+#from ddpg_network_no_lstm import CriticNetwork
 from utilities import State
 from utilities import ReplayBuffer
 import time
@@ -48,7 +50,7 @@ class Coach():
 		self.lidar_dim=lidar_dim
 		self.lidar_seqlen=lidar_seqlen
 		self.lidar_rmax=2.0
-		self.lidar_colldist=0.3
+		self.lidar_colldist=0.25
 		
 		self.batch_size=batch_size
 
@@ -176,6 +178,8 @@ class Coach():
 		self.t_behavior=Thread(target=self.interact_with_environment)
 		self.t_training=Thread(target=self.train)
 
+		self.log = open('/media/zilong/Backup/RLCA/save/malp_rosbot/log/'+self.name,'w+')
+
 
 	def train(self):
 		wi=0
@@ -223,7 +227,7 @@ class Coach():
 											act_batch=self.batch_joint_nact)
 			
 			#the target q-value for TD(0). Gamma=0.95 
-			tar_q=batch['joint_reward'][wi]+0.95*(next_q*(1-batch['terminal']))
+			tar_q=batch['joint_reward'][wi]+0.99*(next_q*(1-batch['terminal']))
 			#print("tar_q",tar_q.shape,tar_q[0])
 
 			self.critic.copy_master_network()
@@ -262,7 +266,7 @@ class Coach():
 										ind_batch=batch['index'][wi],
 										act_batch=self.batch_joint_nact)
 				#the target q-value for TD(0). Gamma=0.95 
-				tar_q=batch['joint_reward'][0]+0.95*(next_q*(1-batch['terminal']))
+				tar_q=batch['joint_reward'][0]+0.99*(next_q*(1-batch['terminal']))
 				#store loss and policy gradients to tensorboard
 				tb_loss=self.critic.summary(obs_batch=batch['joint_cobs'],
 											dir_batch=batch['joint_cdir'],
@@ -327,7 +331,7 @@ class Coach():
 				print('step:',self.step)
 				print('collided: ',self.collided)
 				print('replay buffer size: ', self.replay_buffer.size())
-				
+				self.log.write(str(self.episode)+","+str(self.eprwd)+"\n")
 
 				self.step=0
 				self.eprwd=0
@@ -386,7 +390,7 @@ class Coach():
 		for i in xrange(self.n_worker):
 			cgoal_dist=np.linalg.norm(self.joint_cstate[i].pose[0,0:self.pos_dim]-self.joint_goal[i])
 			ngoal_dist=np.linalg.norm(self.joint_nstate[i].pose[0,0:self.pos_dim]-self.joint_goal[i])
-			goal_rwd=5.0*(cgoal_dist-ngoal_dist)
+			goal_rwd=20.0*(cgoal_dist-ngoal_dist)#was 3.0
 			#ossc_rwd=-0.1*np.linalg.norm(self.joint_nstate[i].pose[0,3:6])
 			#print ossc_rwd
 			#print(self.joint_nstate[i].pose[0][3:6])
@@ -404,9 +408,9 @@ class Coach():
 
 		if all_reached_goal:
 			for i in xrange(self.n_worker):
-				rewards[i]+=10.0
+				rewards[i]+=5.0
 
-		terminal=int(all_reached_goal|one_has_collided)
+		terminal=int(all_reached_goal)
 		return rewards,terminal,one_has_collided
 
 	#state stansition based on a joint action
@@ -543,7 +547,7 @@ class Coach():
 		action[0][1]=min(max(action[0][1],-1),1)
 
 	def ornstein_uhlenbeck_noise_lv(self,i):
-		sigma = 0.2  # Standard deviation.
+		sigma = 0.1  # Standard deviation.
 		mu = 0.  # Mean.
 		tau = .05  # Time constant.
 		dt = .001  # Time step.
@@ -560,7 +564,7 @@ class Coach():
 		return self.ou_noise_lv[i]
 
 	def ornstein_uhlenbeck_noise_av(self,i):
-		sigma = 0.2  # Standard deviation.
+		sigma = 0.1  # Standard deviation.
 		mu = 0.  # Mean.
 		tau = .05  # Time constant.
 		dt = .001  # Time step.

@@ -2,7 +2,7 @@
 <launch>
   <!-- Include the world -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find malp_rosbot)/worlds/train_ma_mix_2.world"/>
+    <arg name="world_name" value="$(find malp_rosbot)/worlds/train_ma_mix_3.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>

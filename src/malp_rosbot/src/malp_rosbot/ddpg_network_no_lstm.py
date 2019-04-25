@@ -78,15 +78,7 @@ class ActorNetwork():
 		obs_in=tf.placeholder(dtype=tf.float32,shape=[self.time_step,None,self.obs_dim])
 		dir_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.dir_dim])
 		ind_in=tf.placeholder(dtype=tf.float32,shape=[1,None,1])
-
-		lstm_in = tf.reverse(obs_in,[0])
-		lstm = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size,name='lstm')
-		hs,c=tf.nn.static_rnn(cell=lstm,
-							inputs=tf.unstack(lstm_in),
-							dtype=tf.float32,
-							scope=rnn_scope)
-		#hs=tf.Print(hs,[hs[-1]],"act_h")
-		fc1_in=tf.concat([hs[-1],dir_in[0,:,:],ind_in[0,:,:]],1)
+		fc1_in=tf.concat([obs_in[0,:,:],dir_in[0,:,:],ind_in[0,:,:]],1)
 		fc1=tf.layers.dense(inputs=fc1_in,
 							units=self.fc1_size,
 							activation=tf.nn.relu,
@@ -266,46 +258,26 @@ class CriticNetwork():
 		joint_dir_in=tf.concat([dir0_in,dir1_in,dir2_in],2)
 		joint_act_in=tf.concat([act0_in,act1_in,act2_in],2)
 
-		lstm = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)
-
-		lstm_in_0 = tf.reverse(obs0_in,[0])	
-		h0,c0=tf.nn.static_rnn(cell=lstm,
-							inputs=tf.unstack(lstm_in_0),
-							dtype=tf.float32,
-							scope=rnn_scope)
-
-		lstm_in_1 = tf.reverse(obs1_in,[0])	
-		h1,c1=tf.nn.static_rnn(cell=lstm,
-							inputs=tf.unstack(lstm_in_1),
-							dtype=tf.float32,
-							scope=rnn_scope)
-
-		lstm_in_2 = tf.reverse(obs2_in,[0])	
-		h2,c2=tf.nn.static_rnn(cell=lstm,
-							inputs=tf.unstack(lstm_in_2),
-							dtype=tf.float32,
-							scope=rnn_scope)
-
-		fc1_in=tf.concat([h0[-1],h1[-1],h2[-1],joint_dir_in[0,:,:],joint_act_in[0,:,:],ind_in[0,:,:]],1)
+		fc1_in=tf.concat([obs0_in[0,:,:],obs1_in[0,:,:],obs2_in[0,:,:],joint_dir_in[0,:,:],joint_act_in[0,:,:],ind_in[0,:,:]],1)
 		fc1=tf.layers.dense(inputs=fc1_in,
 							units=self.fc1_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
 		fc2=tf.layers.dense(inputs=fc1,
 							units=self.fc2_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
 		fc3 = tf.layers.dense(inputs=fc2,
 							units=self.fc3_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),
 							bias_initializer=tf.initializers.zeros())
 		q_out=tf.layers.dense(inputs=fc3,
 							units=1,
 							activation=None,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
 		return (obs0_in,obs1_in,obs2_in,
 				dir0_in,dir1_in,dir2_in,

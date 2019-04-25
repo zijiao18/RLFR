@@ -5,6 +5,8 @@ import numpy as np
 import datetime
 from malp_rosbot.ddpg_network import ActorNetwork
 from malp_rosbot.ddpg_network import CriticNetwork
+#from malp_rosbot.ddpg_network_no_lstm import ActorNetwork
+#from malp_rosbot.ddpg_network_no_lstm import CriticNetwork
 from malp_rosbot.coach import Coach
 
 vel_dim=3#(x,y,yaw), do not change
