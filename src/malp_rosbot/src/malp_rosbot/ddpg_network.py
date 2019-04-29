@@ -290,22 +290,22 @@ class CriticNetwork():
 		fc1=tf.layers.dense(inputs=fc1_in,
 							units=self.fc1_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001)
 							bias_initializer=tf.initializers.zeros())
 		fc2=tf.layers.dense(inputs=fc1,
 							units=self.fc2_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001)
 							bias_initializer=tf.initializers.zeros())
 		fc3 = tf.layers.dense(inputs=fc2,
 							units=self.fc3_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
 		q_out=tf.layers.dense(inputs=fc3,
 							units=1,
 							activation=None,
-							kernel_initializer=tf.initializers.random_normal(0.,0.001),#tf.keras.initializers.he_normal()
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
 		return (obs0_in,obs1_in,obs2_in,
 				dir0_in,dir1_in,dir2_in,

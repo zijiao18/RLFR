@@ -22,8 +22,8 @@ xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
     </xacro:sonar_sensor>
 
     <xacro:include filename="$(find cvg_sim_gazebo)/urdf/sensors/lidar_sensor.urdf.xacro" />
-    <xacro:lidar_sensor name="lidar" parent="base_link" ros_topic="scan" update_rate="10" min_range="0.2" max_range="2.0" field_of_view_h="${360*M_PI/180}" field_of_view_v="${1*M_PI/180}" ray_count_h="180" ray_count_v="1">
-      <origin xyz="0.0 0.0 0.1" rpy="0 0 0"/>
+    <xacro:lidar_sensor name="lidar" parent="base_link" ros_topic="scan" update_rate="10" min_range="0.35" max_range="2.0" field_of_view_h="${360*M_PI/180}" field_of_view_v="${1*M_PI/180}" ray_count_h="180" ray_count_v="1">
+      <origin xyz="0.0 0.0 0.025" rpy="0 0 0"/>
     </xacro:lidar_sensor>
 
     <!-- Hokuyo UTM-30LX mounted upside down below the quadrotor body 

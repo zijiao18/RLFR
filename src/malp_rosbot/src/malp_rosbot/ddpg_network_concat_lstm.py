@@ -75,26 +75,30 @@ class ActorNetwork():
 
 	def build_network(self,rnn_scope):
 		
-		obs_in = tf.placeholder(dtype=tf.float32,shape=[self.time_step,None,self.obs_dim])
-		dir_in = tf.placeholder(dtype=tf.float32,shape=[1,None,self.dir_dim])
-		ind_in = tf.placeholder(dtype=tf.float32,shape=[1,None,1])
-		
-		obs_in_flat = tf.reshape(tf.transpose(obs_in, [1, 0, 2]), [-1, self.time_step*self.obs_dim]) 
-		
-		fc1_in=tf.concat([obs_in_flat, dir_in[0,:,:], ind_in[0,:,:]], 1)
-		
+		obs_in=tf.placeholder(dtype=tf.float32,shape=[self.time_step,None,self.obs_dim])
+		dir_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.dir_dim])
+		ind_in=tf.placeholder(dtype=tf.float32,shape=[1,None,1])
+
+		lstm_in = tf.reverse(obs_in,[0])
+		lstm = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size,name='lstm')
+		hs,c=tf.nn.static_rnn(cell=lstm,
+							inputs=tf.unstack(lstm_in),
+							dtype=tf.float32,
+							scope=rnn_scope)
+		#hs=tf.Print(hs,[hs[-1]],"act_h")
+		fc1_in=tf.concat([hs[-1],dir_in[0,:,:],ind_in[0,:,:]],1)
 		fc1=tf.layers.dense(inputs=fc1_in,
 							units=self.fc1_size,
 							activation=tf.nn.relu,
 							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.0,0.001),
 							bias_initializer=tf.initializers.zeros())
-		
+		#fc1=tf.Print(fc1,[fc1],"act_fc1")
 		fc2=tf.layers.dense(inputs=fc1,
 							units=self.fc2_size,
 							activation=tf.nn.relu,
 							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.0,0.001),
 							bias_initializer=tf.initializers.zeros())
-		
+		#fc2=tf.Print(fc2,[fc2],"act_fc2")
 		fc3 = tf.layers.dense(inputs=fc2,
 							units=self.fc3_size,
 							activation=tf.nn.relu,
@@ -114,7 +118,6 @@ class ActorNetwork():
 								bias_initializer=tf.initializers.zeros())
 
 		act_out=tf.concat([lvel_out,avel_out],1)
-		
 		return obs_in,dir_in,ind_in,act_out
 
 	def train(self,obs_batch,dir_batch,ind_batch,act_grads):
@@ -246,60 +249,56 @@ class CriticNetwork():
 
 
 	def build_network(self,rnn_scope):
-		obs0_in = tf.placeholder(dtype=tf.float32, shape=[self.time_step, None, self.obs_dim])
-		obs1_in = tf.placeholder(dtype=tf.float32, shape=[self.time_step, None, self.obs_dim])
-		obs2_in = tf.placeholder(dtype=tf.float32, shape=[self.time_step, None, self.obs_dim])
+		obs0_in=tf.placeholder(dtype=tf.float32,shape=[self.time_step,None,self.obs_dim])
+		obs1_in=tf.placeholder(dtype=tf.float32,shape=[self.time_step,None,self.obs_dim])
+		obs2_in=tf.placeholder(dtype=tf.float32,shape=[self.time_step,None,self.obs_dim])
 
-		dir0_in = tf.placeholder(dtype=tf.float32, shape=[1, None, self.dir_dim])
-		dir1_in = tf.placeholder(dtype=tf.float32, shape=[1, None, self.dir_dim])
-		dir2_in = tf.placeholder(dtype=tf.float32, shape=[1, None, self.dir_dim])
+		dir0_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.dir_dim])
+		dir1_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.dir_dim])
+		dir2_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.dir_dim])
 		
-		act0_in = tf.placeholder(dtype=tf.float32, shape=[1, None, self.act_dim])
-		act1_in = tf.placeholder(dtype=tf.float32, shape=[1, None, self.act_dim])
-		act2_in = tf.placeholder(dtype=tf.float32, shape=[1, None, self.act_dim])
+		act0_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.act_dim])
+		act1_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.act_dim])
+		act2_in=tf.placeholder(dtype=tf.float32,shape=[1,None,self.act_dim])
 		
-		ind_in=tf.placeholder(dtype=tf.float32, shape=[1, None, 1])
+		ind_in=tf.placeholder(dtype=tf.float32,shape=[1,None,1])
 
-		joint_dir_in = tf.concat([dir0_in, dir1_in, dir2_in], 2)
-		joint_act_in = tf.concat([act0_in, act1_in, act2_in], 2)
+		joint_obs_in=tf.concat([obs0_in,obs1_in,obs2_in],2)
+		joint_dir_in=tf.concat([dir0_in,dir1_in,dir2_in],2)
+		joint_act_in=tf.concat([act0_in,act1_in,act2_in],2)
 
-		obs0_in_flat = tf.reshape(tf.transpose(obs0_in, perm=[1, 0, 2]), 
-								[-1, self.time_step*self.obs_dim])
-		obs1_in_flat = tf.reshape(tf.transpose(obs1_in, perm=[1, 0, 2]), 
-								[-1, self.time_step*self.obs_dim])
-		obs2_in_flat = tf.reshape(tf.transpose(obs2_in, perm=[1, 0, 2]), 
-								[-1, self.time_step*self.obs_dim]) 
+		lstm = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)
+		lstm_in = tf.reverse(joint_obs_in,[0])
+		h, c = tf.nn.static_rnn(cell = lstm,
+								inputs = tf.unstack(lstm_in),
+								dtype = tf.float32,
+								scope = rnn_scope)
 
-		fc1_in = tf.concat([obs0_in_flat, obs1_in_flat, obs2_in_flat, joint_dir_in[0,:,:], joint_act_in[0,:,:], ind_in[0,:,:]], 1)
-		
-		fc1 = tf.layers.dense(inputs=fc1_in,
+		fc1_in=tf.concat([h[-1],joint_dir_in[0,:,:],joint_act_in[0,:,:],ind_in[0,:,:]],1)
+		fc1=tf.layers.dense(inputs=fc1_in,
 							units=self.fc1_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001)
 							bias_initializer=tf.initializers.zeros())
-		
-		fc2 = tf.layers.dense(inputs=fc1,
+		fc2=tf.layers.dense(inputs=fc1,
 							units=self.fc2_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001)
 							bias_initializer=tf.initializers.zeros())
-		
 		fc3 = tf.layers.dense(inputs=fc2,
 							units=self.fc3_size,
 							activation=tf.nn.relu,
-							kernel_initializer=tf.keras.initializers.he_normal(),
+							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
-		
-		q_out = tf.layers.dense(inputs=fc3,
+		q_out=tf.layers.dense(inputs=fc3,
 							units=1,
 							activation=None,
 							kernel_initializer=tf.keras.initializers.he_normal(),#tf.initializers.random_normal(0.,0.001),
 							bias_initializer=tf.initializers.zeros())
-		
-		return (obs0_in, obs1_in, obs2_in,
-				dir0_in, dir1_in, dir2_in,
-				act0_in, act1_in, act2_in,
-				ind_in, q_out)
+		return (obs0_in,obs1_in,obs2_in,
+				dir0_in,dir1_in,dir2_in,
+				act0_in,act1_in,act2_in,
+				ind_in,q_out)
 
 	def train(self,obs_batch,dir_batch,ind_batch,act_batch,tar_q_batch):
 		return self.sess.run([self.q_out, self.optimize], feed_dict={
