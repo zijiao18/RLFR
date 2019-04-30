@@ -286,7 +286,7 @@ class CriticNetwork():
 							dtype=tf.float32,
 							scope=rnn_scope)
 
-		fc1_in=tf.concat([h0[-1],h1[-1],h2[-1],joint_dir_in[0,:,:],joint_act_in[0,:,:],ind_in[0,:,:]],1)
+		fc1_in=tf.concat([h0[-1], h1[-1], h2[-1], joint_dir_in[0,:,:], joint_act_in[0,:,:], ind_in[0,:,:]], 1)
 		fc1=tf.layers.dense(inputs=fc1_in,
 							units=self.fc1_size,
 							activation=tf.nn.relu,

@@ -12,10 +12,10 @@ from geometry_msgs.msg import Pose, Twist
 from std_msgs.msg import Empty, Float32MultiArray
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-#from ddpg_network import ActorNetwork
-#from ddpg_network import CriticNetwork
-from ddpg_network_no_lstm import ActorNetwork
-from ddpg_network_no_lstm import CriticNetwork
+from ddpg_network import ActorNetwork
+from ddpg_network import CriticNetwork
+#from ddpg_network_no_lstm import ActorNetwork
+#from ddpg_network_no_lstm import CriticNetwork
 #from ddpg_network_concat_lstm import ActorNetwork
 #from ddpg_network_concat_lstm import CriticNetwork
 from utilities import State

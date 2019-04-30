@@ -3,10 +3,10 @@ import tensorflow as tf
 import rospy
 import numpy as np
 import datetime
-#from malp_rosbot.ddpg_network import ActorNetwork
-#from malp_rosbot.ddpg_network import CriticNetwork
-from malp_rosbot.ddpg_network_no_lstm import ActorNetwork
-from malp_rosbot.ddpg_network_no_lstm import CriticNetwork
+from malp_rosbot.ddpg_network import ActorNetwork
+from malp_rosbot.ddpg_network import CriticNetwork
+#from malp_rosbot.ddpg_network_no_lstm import ActorNetwork
+#from malp_rosbot.ddpg_network_no_lstm import CriticNetwork
 #from malp_rosbot.ddpg_network_concat_lstm import ActorNetwork
 #from malp_rosbot.ddpg_network_concat_lstm import CriticNetwork
 from malp_rosbot.coach import Coach
@@ -17,16 +17,16 @@ act_dim=2#(lv,av), do not change
 obs_dim=180
 obs_seqlen=4
 batch_size=256
-actor_lstm_state_dim=256
-critic_lstm_state_dim=256
-actor_fc1_unit=2048
-actor_fc2_unit=2048
+actor_lstm_state_dim=128
+critic_lstm_state_dim=128
+actor_fc1_unit=1024
+actor_fc2_unit=1024
 actor_fc3_unit=1024
-critic_fc1_unit=4096
-critic_fc2_unit=4096
+critic_fc1_unit=2048
+critic_fc2_unit=2048
 critic_fc3_unit=2048
-actor_lr=0.000001
-critic_lr=0.00001
+actor_lr=0.00001
+critic_lr=0.0001
 actor_tau=0.01
 critic_tau=0.01
 
