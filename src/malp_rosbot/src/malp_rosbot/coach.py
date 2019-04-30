@@ -180,7 +180,7 @@ class Coach():
 		self.t_behavior=Thread(target=self.interact_with_environment)
 		self.t_training=Thread(target=self.train)
 
-		self.log = open('/media/zilong/Backup/RLCA/save/malp_rosbot/log/'+self.name,'w+')
+		self.log = open('/media/zilong/Backup/RLFR/save/malp_rosbot/log/'+self.name,'w+')
 
 
 	def train(self):

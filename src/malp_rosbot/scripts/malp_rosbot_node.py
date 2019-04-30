@@ -58,7 +58,7 @@ if __name__ == '__main__':
 	rospy.init_node("malp_rosbot_node")
 	exp_timestamp = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 	sess=tf.Session()
-	tb_writer=tf.summary.FileWriter('/media/zilong/Backup/RLCA/save/malp_rosbot/tbsum/'+exp_timestamp)
+	tb_writer=tf.summary.FileWriter('/media/zilong/Backup/RLFR/save/malp_rosbot/tbsum/'+exp_timestamp)
 
 	master_actor=ActorNetwork(sess=sess,
 							name='master_actor',
@@ -188,7 +188,7 @@ if __name__ == '__main__':
 		c2.start()
 		rospy.spin()
 	finally:
-		saver.save(sess,'/media/zilong/Backup/RLCA/save/malp_rosbot/models/'+exp_timestamp+'/model.ckpt')
+		saver.save(sess,'/media/zilong/Backup/RLFR/save/malp_rosbot/models/'+exp_timestamp+'/model.ckpt')
 		print("malp_rosbot_node terminated...")
 		
 		
