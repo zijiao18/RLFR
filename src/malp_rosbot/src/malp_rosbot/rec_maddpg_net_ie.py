@@ -266,25 +266,24 @@ class CriticNetwork():
 		joint_dir_in=tf.concat([dir0_in,dir1_in,dir2_in],2)
 		joint_act_in=tf.concat([act0_in,act1_in,act2_in],2)
 
-		lstm = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)
-
+		lstm0 = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)
 		lstm_in_0 = tf.reverse(obs0_in,[0])	
-		h0,c0=tf.nn.static_rnn(cell=lstm,
+		h0,c0=tf.nn.static_rnn(cell=lstm0,
 							inputs=tf.unstack(lstm_in_0),
 							dtype=tf.float32,
-							scope=rnn_scope)
-
+							scope=rnn_scope+'0')
+		lstm1 = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)
 		lstm_in_1 = tf.reverse(obs1_in,[0])	
-		h1,c1=tf.nn.static_rnn(cell=lstm,
+		h1,c1=tf.nn.static_rnn(cell=lstm1,
 							inputs=tf.unstack(lstm_in_1),
 							dtype=tf.float32,
-							scope=rnn_scope)
-
+							scope=rnn_scope+'1')
+		lstm2 = tf.contrib.rnn.BasicLSTMCell(num_units=self.lstm_state_size)
 		lstm_in_2 = tf.reverse(obs2_in,[0])	
-		h2,c2=tf.nn.static_rnn(cell=lstm,
+		h2,c2=tf.nn.static_rnn(cell=lstm2,
 							inputs=tf.unstack(lstm_in_2),
 							dtype=tf.float32,
-							scope=rnn_scope)
+							scope=rnn_scope+'2')
 
 		fc1_in=tf.concat([h0[-1], h1[-1], h2[-1], joint_dir_in[0,:,:], joint_act_in[0,:,:], ind_in[0,:,:]], 1)
 		fc1=tf.layers.dense(inputs=fc1_in,

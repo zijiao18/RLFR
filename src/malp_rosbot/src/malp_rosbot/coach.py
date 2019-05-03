@@ -12,12 +12,9 @@ from geometry_msgs.msg import Pose, Twist
 from std_msgs.msg import Empty, Float32MultiArray
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from ddpg_network import ActorNetwork
-from ddpg_network import CriticNetwork
-#from ddpg_network_no_lstm import ActorNetwork
-#from ddpg_network_no_lstm import CriticNetwork
-#from ddpg_network_concat_lstm import ActorNetwork
-#from ddpg_network_concat_lstm import CriticNetwork
+from rec_maddpg_net_ie import ActorNetwork, CriticNetwork
+#from rec_maddpg_net_je import ActorNetwork, CriticNetwork
+#from maddpg_net import ActorNetwork, CriticNetwork
 from utilities import State
 from utilities import ReplayBuffer
 import time
@@ -130,7 +127,7 @@ class Coach():
 										obs_seqlen=self.lidar_seqlen,
 										batch_size=self.batch_size,
 										n_worker=self.n_worker)
-		self.min_repbuf_size=1000
+		self.min_repbuf_size=10
 
 		self.actor = ActorNetwork(sess=sess,
 								name=self.name+"_actor",
