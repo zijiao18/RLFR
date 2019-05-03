@@ -127,7 +127,7 @@ class Coach():
 										obs_seqlen=self.lidar_seqlen,
 										batch_size=self.batch_size,
 										n_worker=self.n_worker)
-		self.min_repbuf_size=10
+		self.min_repbuf_size=1000
 
 		self.actor = ActorNetwork(sess=sess,
 								name=self.name+"_actor",
