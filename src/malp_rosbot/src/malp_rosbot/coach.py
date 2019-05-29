@@ -12,11 +12,10 @@ from geometry_msgs.msg import Pose, Twist
 from std_msgs.msg import Empty, Float32MultiArray
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from rec_maddpg_net_ie import ActorNetwork, CriticNetwork
-#from rec_maddpg_net_je import ActorNetwork, CriticNetwork
+#from rec_maddpg_net_ie import ActorNetwork, CriticNetwork
+from rec_maddpg_net_je import ActorNetwork, CriticNetwork
 #from maddpg_net import ActorNetwork, CriticNetwork
-from utilities import State
-from utilities import ReplayBuffer
+from utilities import State, ReplayBuffer
 import time
 
 class Coach():
@@ -49,7 +48,7 @@ class Coach():
 		self.lidar_dim=lidar_dim
 		self.lidar_seqlen=lidar_seqlen
 		self.lidar_rmax=2.0
-		self.lidar_colldist=0.25
+		self.lidar_colldist=0.22
 		
 		self.batch_size=batch_size
 
@@ -174,10 +173,11 @@ class Coach():
 		self.batch_joint_cact=[np.zeros([1,self.batch_size,2]) 
 								for _ in xrange(self.n_worker)]
 		
-		self.t_behavior=Thread(target=self.interact_with_environment)
-		self.t_training=Thread(target=self.train)
+		self.t_behavior = Thread(target=self.interact_with_environment)
+		self.t_training = Thread(target=self.train)
+		self.t_testing = Thread(target=self.test)
 
-		self.log = open('/media/zilong/Backup/RLFR/save/malp_rosbot/log/'+self.name,'w+')
+		self.log = open('/media/zilong/Backup/RLFR/save/malp_rosbot/log/'+self.name+'.txt','w+')
 
 
 	def train(self):
@@ -258,7 +258,7 @@ class Coach():
 			self.actor.update_target_network()
 			self.critic.update_target_network()
 
-			if self.name=="coach0" and self.epoch%10==0:
+			if self.tb_writer and self.name=="coach0" and self.epoch%10==0:
 				#the q-value of the next state-action batch shape=[batch,1]
 				next_q=self.critic.predict(obs_batch=batch['joint_nobs'],
 										dir_batch=batch['joint_ndir'],
@@ -342,7 +342,60 @@ class Coach():
 				#print("interact_with_environment timestamp:",rospy.get_time())
 				#print("wall time: ", time.clock())
 				self.interact_rate.sleep()
+
+	#controls all the robots in an environment
+	def test(self):
+		joint_traj = ["", "", ""]
+		self.initMDP() #determine o_0,a_0
+		while not rospy.is_shutdown():
+
+			#observe the transited state
+			self.observe_state() 
+
+			#determine joint action in the transited state
+			joint_next_action=[]
+			for i in xrange(self.n_worker):
+				next_action=self.actor.predict(self.joint_nstate[i].obs_in(),
+										self.joint_nstate[i].dir_in(),
+										self.joint_nstate[i].ind_in())
+				joint_next_action.append(next_action)
+				joint_traj[i] += "%f;%f;"%(self.joint_nstate[i].pose[0][0],
+										self.joint_nstate[i].pose[0][1])
+
+			self.actuate(joint_next_action)
+
+			self.joint_reward,self.terminal,self.collided=self.receive_reward()
+
+			#transite state and action, maybe into terminal state
+			for i in xrange(self.n_worker):
+				self.joint_cstate[i].copy(self.joint_nstate[i])#deepcopy
+			self.joint_action=joint_next_action
+			self.step+=1
+			self.eprwd+=sum(self.joint_reward)
 			
+			if self.terminal or self.collided or self.step>=self.max_step:
+				print('-----------------------'+self.name+'--------------------------')
+				print('episode:',self.episode)
+				print('eprwd:',self.eprwd)
+				print('step:',self.step)
+				print('collided: ',self.collided)
+				self.log.write(str(self.episode) + ","
+							+ str(self.eprwd) + "," 
+							+ str(self.step) + ","
+							+ str(self.collided) + ","
+							+ joint_traj[0] + ","
+							+ joint_traj[1] + ","
+							+ joint_traj[2] + "\n")
+				self.step=0
+				self.eprwd=0
+				self.episode+=1#read by train()
+				joint_traj = ["", "", ""]
+				self.reset_pose()
+				self.reset_state_action()
+				self.initMDP()
+			else:
+				self.interact_rate.sleep()
+
 
 	def initMDP(self):
 		self.interact_rate.sleep() #reset loop timer to now
@@ -515,21 +568,21 @@ class Coach():
 							for _ in xrange(self.n_worker)]
 
 	def terminate(self):
-		#if(not rospy.is_shutdown()):
-		#	rospy.signal_shutdown("training is completed...")
-		self.t_behavior.join()
-		print("behavior thread is terminated...")
-		self.t_training.join()
-		print("training thread is terminated...")
+		self.log.close()
 		
-	def start(self):
-		self.actor.init_target_network()
+	def start_training(self):
+		self.actor.init_target_network() #copy master_network to target_network
 		self.actor.copy_master_network()
-		self.critic.init_target_network()
+		self.critic.init_target_network() #copy master_network to target_network
 		self.critic.copy_master_network()
 		self.t_behavior.start()
 		self.t_training.start()
 		#return self.t_behavior,self.t_training
+
+	def start_testing(self):
+		self.actor.copy_master_network()
+		self.critic.copy_master_network()
+		self.t_testing.start()
 
 	def epslion_greedy(self):
 		self.epslion_t+=1

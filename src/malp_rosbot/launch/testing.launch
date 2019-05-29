@@ -159,5 +159,5 @@
           respawn="false" output="screen"/>
   </group>
   
-  <node pkg="malp_rosbot" type="malp_rosbot_train_node.py" name="malp_rosbot_train_node" output="screen"/>
+  <node pkg="malp_rosbot" type="malp_rosbot_test_node.py" name="malp_rosbot_test_node" output="screen"/>
 </launch>

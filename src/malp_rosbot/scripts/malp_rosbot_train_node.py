@@ -5,7 +5,7 @@ import numpy as np
 import datetime
 from malp_rosbot.rec_maddpg_net_ie import ActorNetwork, CriticNetwork
 #from malp_rosbot.rec_maddpg_net_je import ActorNetwork, CriticNetwork
-#from malp_rosbot.maddpg_network import ActorNetwork, CriticNetwork
+#from malp_rosbot.maddpg_net import ActorNetwork, CriticNetwork
 from malp_rosbot.coach import Coach
 
 vel_dim=3#(x,y,yaw), do not change
@@ -22,8 +22,8 @@ actor_fc3_unit=1024
 critic_fc1_unit=2048
 critic_fc2_unit=2048
 critic_fc3_unit=2048
-actor_lr=0.00001
-critic_lr=0.0001
+actor_lr=0.000001
+critic_lr=0.000001
 actor_tau=0.01
 critic_tau=0.01
 
@@ -179,10 +179,10 @@ if __name__ == '__main__':
 	
 	try:
 		sess.run(tf.global_variables_initializer())
-		#saver.restore(sess,'/media/zilong/Backup/ros_workspace/src/mamg/save/models/model.ckpt')
-		c0.start()
-		c1.start()
-		c2.start()
+		saver.restore(sess,'/media/zilong/Backup/RLFR/save/malp_rosbot/models/IE/model.ckpt')
+		c0.start_training()
+		c1.start_training()
+		c2.start_training()
 		rospy.spin()
 	finally:
 		saver.save(sess,'/media/zilong/Backup/RLFR/save/malp_rosbot/models/'+exp_timestamp+'/model.ckpt')
