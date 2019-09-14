@@ -135,6 +135,6 @@ if __name__ == '__main__':
 		coach.start_training()
 		rospy.spin()
 	finally:
-		print("malp_rosbot_node terminated...")
+		print("hier_rosbot_node terminated...")
 		
 		
