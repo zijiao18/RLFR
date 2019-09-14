@@ -1,6 +1,6 @@
 #!usr/bin/env python
 import numpy as np
-import random as rand
+import random as rand; rand.seed(0)
 from collections import deque
 import threading
 

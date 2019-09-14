@@ -48,8 +48,6 @@ final_goals=np.array(
 	dtype=float
 )
 
-
-# TODO: revise the file and start testing the implementation
 if __name__ == '__main__':
 	rospy.init_node("hier_rosbot_node")
 	exp_timestamp = datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")

@@ -223,7 +223,8 @@ class Coach():
 			"/gazebo/set_model_state",
 			SetModelState
 		)
-		self.training_rate=rospy.Rate(30)
+		self.worker_training_rate=rospy.Rate(10)
+		self.manager_training_rate=rospy.Rate(10)
 		self.interact_rate=rospy.Rate(10)
 		self.load_lidar=[False for _ in xrange(self.n_agent)]
 		self.load_odom=[False for _ in xrange(self.n_agent)]
@@ -285,7 +286,7 @@ class Coach():
 				print('worker replay buffer size: ', self.worker_replay_buffer.size())
 				self.step=0
 				self.eprwd=0
-				self.episode+=1#read by train()
+				self.episode+=1
 				self.reset()
 				self.initMDP()
 			self.interact_rate.sleep()
@@ -327,7 +328,7 @@ class Coach():
 				self.manager_actor.update_target_network()
 				self.manager_critic.update_target_network()
 				self.epoch+=1
-			self.training_rate.sleep()
+			self.manager_training_rate.sleep()
 	
 	def train_worker(self):
 		while not rospy.is_shutdown():
@@ -367,7 +368,7 @@ class Coach():
 					goal_batch=batch['curgoal'],
 					action_gradients=action_gradients
 				)
-			self.training_rate.sleep()
+			self.worker_training_rate.sleep()
 
 	def initMDP(self):
 		self.observe_state()
