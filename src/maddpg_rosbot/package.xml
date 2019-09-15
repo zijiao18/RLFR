@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>malp_rosbot</name>
+  <name>maddpg_rosbot</name>
   <version>0.0.0</version>
-  <description>The multi-agent reinforcement learning method for 
-  	learning local policies for multi-robot collision avoidance</description>
+  <description>The multi-agent DDPG method for 
+    learning local policies for multi-robot collision avoidance</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

@@ -2,7 +2,7 @@
 <launch>
   <!-- Include the world -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="world_name" value="$(find malp_rosbot)/worlds/train_ma_mix_3.world"/>
+    <arg name="world_name" value="$(find maddpg_rosbot)/worlds/train_ma_mix_3.world"/>
     <arg name="paused" value="false"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
@@ -159,5 +159,5 @@
           respawn="false" output="screen"/>
   </group>
   
-  <node pkg="malp_rosbot" type="malp_rosbot_train_node.py" name="malp_rosbot_train_node" output="screen"/>
+  <node pkg="maddpg_rosbot" type="maddpg_rosbot_train_node.py" name="maddpg_rosbot_train_node" output="screen"/>
 </launch>
