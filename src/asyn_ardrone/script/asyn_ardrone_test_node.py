@@ -3,9 +3,11 @@ import rospy
 import numpy as np
 import csv
 import tensorflow as tf
-from a3c_test.ddpg_network import ActorNetwork
-from a3c_test.ddpg_network import CriticNetwork
-from a3c_test.worker import Worker
+from asyn_ardrone.ddpg_network import (
+    ActorNetwork,
+    CriticNetwork
+)
+from asyn_ardrone.worker import Worker
 
 model_path = ''
 log_path = ''

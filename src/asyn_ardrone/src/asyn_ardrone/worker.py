@@ -5,9 +5,19 @@ import random as rand
 import Queue
 from threading import Thread
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Empty, Float32MultiArray
-from asyn_ardrone.ddpg_network import ActorNetwork, CriticNetwork
-from asyn_ardrone.utilities import State, Feedback, ReplayBuffer
+from std_msgs.msg import (
+    Empty, 
+    Float32MultiArray
+)
+from asyn_ardrone.ddpg_network import (
+    ActorNetwork, 
+    CriticNetwork
+)
+from asyn_ardrone.utilities import (
+    State, 
+    Feedback, 
+    ReplayBuffer
+)
 
 class Worker():
     def __init__(

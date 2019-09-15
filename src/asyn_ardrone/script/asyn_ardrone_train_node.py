@@ -1,12 +1,14 @@
-#!usr/bin/env python
+#!/usr/bin/env python
 import rospy
 import csv
 import numpy as np
 import tensorflow as tf
 from threading import Thread
-from ddpg_network import ActorNetwork
-from ddpg_network import CriticNetwork
-from worker import Worker
+from asyn_ardrone.ddpg_network import (
+    ActorNetwork, 
+    CriticNetwork
+)
+from asyn_ardrone.worker import Worker
 
 rospy.init_node("asyn_ardrone_train_node")
 model_path = ''
