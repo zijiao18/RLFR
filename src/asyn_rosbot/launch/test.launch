@@ -1,0 +1,163 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Include the world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find hier_rosbot)/worlds/train_ma_mix_3.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+       
+
+  <!-- send the robot XML to param server -->
+  <arg name="model_urdf" value="$(find rosbot_description)/urdf/rosbot.xacro"/>
+
+  <!-- Spawn 1st simulated quadrotor uav -Y was 3.14--> 
+  <group ns="rosbot0">  
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot0" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 0.0 
+                -y 1.5
+                -z 0
+                -R 0
+                -P 0 
+                -Y -1.57
+                -model rosbot0"
+           respawn="false" output="screen"/>
+  </group> 
+
+
+  <!-- Spawn 2nd simulated quadrotor uav -->
+  <group ns="rosbot1">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot1" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x -1.5
+                -y 0.0
+                -z 0
+                -R 0
+                -P 0 
+                -Y 0.0
+                -model rosbot1"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 3rd simulated quadrotor uav -->
+  <group ns="rosbot2">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot2" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 1.5 
+                -y 0
+                -z 0
+                -R 0
+                -P 0 
+                -Y 3.14
+                -model rosbot2"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 4th simulated quadrotor uav -->
+  <group ns="rosbot3">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot3" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 0.0
+                -y -4.5
+                -z 0
+                -R 0
+                -P 0 
+                -Y -1.57
+                -model rosbot3"
+          respawn="false" output="screen"/> 
+  </group>
+
+  <!-- Spawn 5th simulated quadrotor uav -->
+  <group ns="rosbot4">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot4" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x -1.5 
+                -y -6.0
+                -z 0
+                -R 0
+                -P 0 
+                -Y 0.0
+                -model rosbot4"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 6th simulated quadrotor uav -->
+  <group ns="rosbot5">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot5" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 1.5 
+                -y -6.0
+                -z 0
+                -R 0
+                -P 0 
+                -Y 3.14
+                -model rosbot5"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 6th simulated quadrotor uav -->
+  <group ns="rosbot6">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot6" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 0.0 
+                -y 7.5
+                -z 0
+                -R 0
+                -P 0 
+                -Y -1.57
+                -model rosbot6"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 6th simulated quadrotor uav -->
+  <group ns="rosbot7">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot7" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x -1.5 
+                -y 6.0
+                -z 0
+                -R 0
+                -P 0 
+                -Y 0
+                -model rosbot7"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 6th simulated quadrotor uav -->
+  <group ns="rosbot8">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot8" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 1.5 
+                -y 6.0
+                -z 0
+                -R 0
+                -P 0 
+                -Y 3.14
+                -model rosbot8"
+          respawn="false" output="screen"/>
+  </group>
+  
+  <node pkg="asyn_rosbot" type="asyn_rosbot_test_node.py" name="asyn_rosbot_test_node" output="screen"/>
+</launch>
