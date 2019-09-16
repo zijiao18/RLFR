@@ -22,7 +22,7 @@ catkin_make
 
 source <mydir>/RLFR/devel/setup.bash
 ```
-3. Run simulation through .roslaunch files.
+3. Run simulation through .launch files.
 ```
 roslaunch <mydir>/RLFR/src/<package_name>/launch/<train_or_test>.launch
 ``` 
