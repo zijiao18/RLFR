@@ -12,6 +12,10 @@ git https://github.com/zijiao18/RLFR.git
 ```
 2. Compile and install the packages
 ```
+sudo apt-get install ros-kinetic-ardrone-autonomy
+
+source /opt/ros/kinetic/setup.bash
+
 cd <mydir>/RLFR/src
 
 catkin_init_workspace
