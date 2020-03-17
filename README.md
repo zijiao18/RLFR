@@ -45,7 +45,8 @@ The following packages implement reinforcement learning methods for mobile robot
 - **sim_drone**: the simulator for AirDrone 2.0 with front and down facing cameras. This package is customized from the [original implementation](http://wiki.ros.org/tum_simulator), in order to support multi-robot simulation.
 - **sim_rosbot**: the [official ROSbot simulator](https://github.com/husarion/rosbot_description). 
 - **ddpg_drone**: the application of the DDPG algorithm to AirDrone 2.0 collision avoidance in cluttered environments. 
-- **asyn_drone, asyn_rosbot**: the implementation of **_"Asynchronous Multitask Reinforcement Learning with Dropout for Continuous Control" (accepted to ICMLA2019)_** using the AirDrone 2.0 and ROSbot simulators.
-- **maddpg_rosbot**: the implementation of **_"End-to-End Reinforcement Learning for Multi-Agent Continuous Control" (accepted to ICMLA2019)_** using the ROSbot simulator.
+- **asyn_drone, asyn_rosbot**: the implementation of **_"Asynchronous Multitask Reinforcement Learning with Dropout for Continuous Control" (accepted to ICMLA2019)_** based on the AirDrone 2.0 and ROSbot simulators.
+- **maddpg_rosbot**: the implementation of **_"End-to-End Reinforcement Learning for Multi-Agent Continuous Control" (accepted to ICMLA2019)_** based on the ROSbot simulator.
+- **rtac_rosbot**: the implementation of **_"A Real-Time Actor-Critic Architecture for Continous Control" (accepted to IEA/AIE2020)_** based on the ROSbot simulatior.
 
 *To report issues, please contact zijiao18@gmail.com*
