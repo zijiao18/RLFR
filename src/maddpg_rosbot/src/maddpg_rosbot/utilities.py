@@ -49,20 +49,21 @@ class State():
             shape=[self.obs_seq_len,self.obs_dim],
             dtype=float
         )
+        self.min_nr = 1 # normlaized minimum lidar range at most recent time step
 
-    def update_obsseq_event(self,lidar_ranges):
-        min_r = self.laser_range_max
-        for r in lidar_ranges:
-            if r<min_r:
-                min_r = r
-        if min_r<=(self.coll_dist/self.laser_range_max):
+    def update_obsseq_event(self,normalized_lidar_ranges):
+        self.min_nr = 1
+        for r in normalized_lidar_ranges:
+            if r<self.min_nr:
+                self.min_nr = r
+        if self.min_nr<=(self.coll_dist/self.laser_range_max):
             self.event = 1
         if self.obs_itr==self.obs_seq_len:      
             for i in xrange(self.obs_seq_len-1):
                 self.obs[i,:] = self.obs[i+1,:]
-            self.obs[self.obs_itr-1,:] = lidar_ranges
+            self.obs[self.obs_itr-1,:] = normalized_lidar_ranges
         else:
-            self.obs[self.obs_itr,:] = lidar_ranges
+            self.obs[self.obs_itr,:] = normalized_lidar_ranges
             self.obs_itr += 1
 
     def update_vel_dir_pose(
@@ -147,6 +148,9 @@ class State():
 
     def ind_in(self):
         return self.ind
+
+    def get_collision_distance(self):
+        return self.min_nr*self.laser_range_max
 
 #the buffer store SARS transactions
 class ReplayBuffer():

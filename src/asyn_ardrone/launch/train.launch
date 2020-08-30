@@ -15,7 +15,7 @@
   <!-- send the robot XML to param server -->
   <arg name="model_urdf" value="$(find cvg_sim_gazebo)/urdf/quadrotor_sensors.urdf.xacro"/>
 
-  <!-- Spawn 1st simulated quadrotor uav -Y was 3.14--> 
+  <!-- Spawn 1st simulated quadrotor uav--> 
   <group ns="ardrone0">  
     <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
     <node name="spawn_robot_ardrone0" pkg="gazebo_ros" type="spawn_model"

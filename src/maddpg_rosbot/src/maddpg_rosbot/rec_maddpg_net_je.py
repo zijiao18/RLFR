@@ -17,9 +17,9 @@ class ActorNetwork():
         lstm_state_dim,
         n_fc1_unit,
         n_fc2_unit,
-        n_fc3_unit,
         learning_rate,
         tau,
+        training,
         device,
         master_network=None
     ):
@@ -34,8 +34,8 @@ class ActorNetwork():
         self.lstm_state_size = lstm_state_dim
         self.fc1_size = n_fc1_unit
         self.fc2_size = n_fc2_unit
-        self.fc3_size = n_fc3_unit
         self.tau = tau
+        self.training = training
         self.learning_rate = learning_rate
         self.net_param_offset = len(tf.trainable_variables())
         print("%s has params offset %d"%(
@@ -158,6 +158,10 @@ class ActorNetwork():
             num_units=self.lstm_state_size,
             name='lstm'
         )
+        lstm = tf.nn.rnn_cell.DropoutWrapper(
+            lstm, 
+            state_keep_prob=0.6
+        )
         hs,c = tf.nn.static_rnn(
             cell=lstm,
             inputs=tf.unstack(lstm_in),
@@ -179,6 +183,11 @@ class ActorNetwork():
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
+        fc1 = tf.layers.dropout(
+            inputs=fc1,
+            rate=0.4,
+            training=self.training
+        )
         fc2 = tf.layers.dense(
             inputs=fc1,
             units=self.fc2_size,
@@ -186,22 +195,20 @@ class ActorNetwork():
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
-        fc3 = tf.layers.dense(
+        fc2 = tf.layers.dropout(
             inputs=fc2,
-            units=self.fc3_size,
-            activation=tf.nn.relu,
-            kernel_initializer=tf.keras.initializers.he_normal(),
-            bias_initializer=tf.initializers.zeros()
+            rate=0.4,
+            training=self.training
         )
         lvel_out=tf.layers.dense(
-            inputs=fc3,
+            inputs=fc2,
             units=1,
             activation=tf.nn.sigmoid,
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
         avel_out=tf.layers.dense(
-            inputs=fc3,
+            inputs=fc2,
             units=1,
             activation=tf.nn.tanh,
             kernel_initializer=tf.keras.initializers.he_normal(),
@@ -342,9 +349,9 @@ class CriticNetwork():
         lstm_state_dim,
         n_fc1_unit,
         n_fc2_unit,
-        n_fc3_unit,
         learning_rate,
         tau,
+        training,
         device,
         master_network=None
     ):
@@ -359,9 +366,9 @@ class CriticNetwork():
         self.lstm_state_size = lstm_state_dim
         self.fc1_size = n_fc1_unit
         self.fc2_size = n_fc2_unit
-        self.fc3_size = n_fc3_unit
         self.learning_rate = learning_rate
         self.tau = tau
+        self.training = training
         self.net_param_offset = len(tf.trainable_variables())
         print("%s has params offset %d"%(
                 name, 
@@ -574,6 +581,10 @@ class CriticNetwork():
         lstm = tf.contrib.rnn.BasicLSTMCell(
             num_units=self.lstm_state_size
         )
+        lstm = tf.nn.rnn_cell.DropoutWrapper(
+            lstm, 
+            state_keep_prob=0.6
+        )
         lstm_in = tf.reverse(joint_obs_in, [0])
         h, _ = tf.nn.static_rnn(
             cell = lstm,
@@ -597,6 +608,11 @@ class CriticNetwork():
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
+        fc1 = tf.layers.dropout(
+            inputs=fc1,
+            rate=0.4,
+            training=self.training
+        )
         fc2 = tf.layers.dense(
             inputs=fc1,
             units=self.fc2_size,
@@ -604,15 +620,13 @@ class CriticNetwork():
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
-        fc3 = tf.layers.dense(
+        fc2 = tf.layers.dropout(
             inputs=fc2,
-            units=self.fc3_size,
-            activation=tf.nn.relu,
-            kernel_initializer=tf.keras.initializers.he_normal(),
-            bias_initializer=tf.initializers.zeros()
+            rate=0.4,
+            training=self.training
         )
         q_out = tf.layers.dense(
-            inputs=fc3,
+            inputs=fc2,
             units=1,
             activation=None,
             kernel_initializer=tf.keras.initializers.he_normal(),

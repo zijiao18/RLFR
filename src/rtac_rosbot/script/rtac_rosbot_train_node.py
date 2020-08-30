@@ -10,43 +10,43 @@ from rtac_rosbot.ddpg_network import (
 from rtac_rosbot.worker import Worker
 
 rospy.init_node("rtac_rosbot_train_node")
-model_save_path = '/media/zilong/Backup/RLFR/save/rtac_rosbot/model/model'
-model_load_path = '/media/zilong/Backup/RLFR/save/rtac_rosbot/model/env3_dec_0_1_5/model'
-log_path = '/media/zilong/Backup/RLFR/save/rtac_rosbot/log'
-tb_writer_path = '/media/zilong/Backup/RLFR/save/rtac_rosbot/tbsum'
+model_save_path = ''
+model_load_path = ''
+log_path = ''
+tb_writer_path = ''
 n_worker = 1
 workers = []
-# init_pose = [
-#     [[-9.0,18.5,0.0,0,0,-1.57]],
-#     [[-9.0,3.5,0.0,0,0,-1.57]],
-#     [[-9,-11.5,0.0,0,0,-1.57]],
-#     [[-39.0,3.5,0.0,0,0,-1.57]]
-# ]
-
 init_pose = [
-    # [[-5.4, 4.0, 0.0, 0.0, 0.0, -1.57]],
-    # [[-4.0, 3.8, 0.0, 0.0, 0.0, 0.0]],
-    [[-4.0, 4.0, 0.0, 0.0, 0.0, 0.0]],
-    # [[-35.4, 4.0, 0.0, 0.0, 0.0, -1.57]],
-    # [[-34.0, 3.8, 0.0, 0.0, 0.0, 0.0]],
-    [[-34.0, 4.0, 0.0, 0.0, 0.0, 0.0]]
+    # [[-9.0,18.5,0.0,0,0,-1.57]],
+    [[-9.0,3.5,0.0,0,0,-1.57]],
+    # [[-9,-11.5,0.0,0,0,-1.57]],
+    [[-39.0,3.5,0.0,0,0,-1.57]]
 ]
 
-# goals = [
-#     [[7.4,14.0,0.0]],
-#     [[7.4,-1.0,0.0]],
-#     [[7.4,-16.0,0.0]],
-#     [[-22.6, -1.0, 0.0]]
+# init_pose = [
+#     # [[-5.4, 4.0, 0.0, 0.0, 0.0, -1.57]],
+#     # [[-4.0, 3.8, 0.0, 0.0, 0.0, 0.0]],
+#     [[-4.0, 4.0, 0.0, 0.0, 0.0, 0.0]],
+#     # [[-35.4, 4.0, 0.0, 0.0, 0.0, -1.57]],
+#     # [[-34.0, 3.8, 0.0, 0.0, 0.0, 0.0]],
+#     [[-34.0, 4.0, 0.0, 0.0, 0.0, 0.0]]
 # ]
 
 goals = [
-    # [[6.0, 0.0, 0.0]],  
-    # [[4.0, -4.0, 0.0]],
-    [[3.0, -3.5, 0.0]],
-    # [[-24.0, 0.0, 0.0]],
-    # [[-26.0, -4.0, 0.0]],
-    [[-27.0, -3.5, 0.0]]
+    # [[7.4,14.0,0.0]],
+    [[7.4,-1.0,0.0]],
+    # [[7.4,-16.0,0.0]],
+    [[-22.6, -1.0, 0.0]]
 ]
+
+# goals = [
+#     # [[6.0, 0.0, 0.0]],  
+#     # [[4.0, -4.0, 0.0]],
+#     [[3.0, -3.5, 0.0]],
+#     # [[-24.0, 0.0, 0.0]],
+#     # [[-26.0, -4.0, 0.0]],
+#     [[-27.0, -3.5, 0.0]]
+# ]
 
 sess = tf.Session()
 master_actor = ActorNetwork(
@@ -203,6 +203,7 @@ def main():
         worker.critic.copy_master_network()
     for worker in workers:
         worker.start_train_dec()
+        # worker.start_train_seq()
     try:
         itr=0
         while not rospy.is_shutdown():

@@ -8,13 +8,7 @@
 * Created on: Oct 22, 2012
 * Author: Hongrong huang
 *
-* Edited on: Apr 21, 2019, by Zilong Jiao
-* 
-* The simulator is revised as an emulator for training reinforcement learning methods. 
-* Modifications: 
-*   - removed subscriber, publisher, and services related to camera
-*   - access camera data through the ros-topics published by camera plugins
-*   - restrict a robot to have only FLYING_MODEL for collision avoidance research
+*
 */
 
 #ifndef HECTOR_GAZEBO_PLUGINS_quadrotor_state_controller_H
@@ -83,6 +77,7 @@ private:
   ros::Subscriber velocity_subscriber_;
   ros::Subscriber imu_subscriber_;
   ros::Subscriber sonar_subscriber_;
+  ros::Subscriber lidar_subscriber_;
   ros::Subscriber state_subscriber_;
 
   // extra robot control command
@@ -92,6 +87,18 @@ private:
 
   ros::Publisher m_navdataPub;
   ros::Publisher m_navdatarawPub;
+  
+
+  // extra camera control command
+  int                              m_selected_cam_num;
+  ros::ServiceServer               toggleCam_service;
+  ros::Subscriber                  camera_info_front_subscriber_;
+  ros::Subscriber                  camera_info_bottom_subscriber_;
+  ros::Publisher                   camera_info_publisher_;
+  image_transport::ImageTransport* camera_it_;
+  image_transport::Subscriber      camera_front_subscriber_;
+  image_transport::Subscriber      camera_bottom_subscriber_;
+  image_transport::Publisher       camera_publisher_;
 
   //***********************************
   
@@ -107,16 +114,26 @@ private:
   void ResetCallback(const std_msgs::EmptyConstPtr&);
   void ImuCallback(const sensor_msgs::ImuConstPtr&);
   void SonarCallback(const sensor_msgs::RangeConstPtr&);
+  void LidarCallback(const sensor_msgs::LaserScanConstPtr&);
   void StateCallback(const nav_msgs::OdometryConstPtr&);
+  //void CameraFrontCallback(const sensor_msgs::ImageConstPtr&);
+  //void CameraBottomCallback(const sensor_msgs::ImageConstPtr&);
+  //void CameraInfoFrontCallback(const sensor_msgs::CameraInfoConstPtr&);
+  //void CameraInfoBottomCallback(const sensor_msgs::CameraInfoConstPtr&);
 
+  // service functions
+  //bool setCamChannelCallback(ardrone_autonomy::CamSelect::Request& request, ardrone_autonomy::CamSelect::Response& response);
+  //bool toggleCamCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
   bool toggleNavdataDemoCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
   bool setLedAnimationCallback(ardrone_autonomy::LedAnim::Request& request, ardrone_autonomy::LedAnim::Response& response);
+  std::vector<float> getStateRewardForPycontroller(math::Vector3& lvel,math::Vector3& avel,std::vector<float>& ranges,math::Pose& pose,bool collided);
 
   ros::Time state_stamp;
   bool state_reset;
   math::Pose pose;
   math::Vector3 euler, velocity, acceleration, angular_velocity;
   double robot_altitude;
+  std::vector<float> laser_ranges;
   // 0: Unknown, 1: Init, 2: Landed, 3: Flying, 4: Hovering, 5: Test
   // 6: Taking off, 7: Goto Fix Point, 8: Landing, 9: Looping
   // Note: 3,7 seems to discriminate type of flying (isFly = 3 | 7)
@@ -138,17 +155,29 @@ private:
   std::string state_topic_;
   std::string lidar_topic_;
 
+  std::string pycontroller_topic;
+
+
   // extra parameters for robot control.
   bool m_isFlying;
   bool m_takeoff;
   bool m_drainBattery;
+  bool m_collided;
+  bool m_reply_pycontroller;
   double m_batteryPercentage;
   double m_maxFlightTime;
   double m_timeAfterTakeOff;
+  ros::Publisher pycontrollerPub;
+  
+  //***********************************
 
   /// \brief save last_time
   common::Time last_time;
   common::Time velcmd_time;
+  /// last navigation data
+  //ardrone_autonomy::Navdata last_navdata;
+  /// filter rate
+  //double filter_rate;
 
   // Pointer to the update event connection
   event::ConnectionPtr updateConnection;

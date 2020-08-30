@@ -24,19 +24,10 @@ from maddpg_rosbot.utilities import (
     State, 
     ReplayBuffer
 )
-from maddpg_rosbot.rec_maddpg_net_ie import (
+from maddpg_rosbot.exp_5bot.rec_maddpg_net_ie import (
     ActorNetwork, 
     CriticNetwork
 )
-# from maddpg_rosbot.rec_maddpg_net_je import (
-#   ActorNetwork, 
-#   CriticNetwork
-# )
-# from maddpg_rosbot.maddpg_net import (
-#   ActorNetwork, 
-#   CriticNetwork
-# )
-
 
 class Coach():
     def __init__(
@@ -74,14 +65,14 @@ class Coach():
         self.sess = sess
         self.name = name
         self.rtoffset = rtoffset
-        self.n_worker = 3  # pre-defined, don't change
+        self.n_worker = 5  # pre-defined, don't change
         self.device = device
         self.epoch = 0
         self.episode = 0
         self.eprwd = 0
         self.step = 0
         self.max_step = 500 
-        self.max_lvel = 1.5
+        self.max_lvel = 1.0
         self.max_avel = 3.14
         self.act_dim = act_dim
         self.pos_dim = pos_dim
@@ -89,12 +80,12 @@ class Coach():
         self.lidar_dim = lidar_dim
         self.lidar_seqlen = lidar_seqlen
         self.lidar_rmax = 2.0
-        self.lidar_colldist = 0.21
+        self.lidar_colldist = 0.25
         self.batch_size = batch_size
         self.epslion = 1.0
         self.epslion_t = 0
-        self.ou_noise_lv = [0.0,0.0,0.0]
-        self.ou_noise_av = [0.0,0.0,0.0]
+        self.ou_noise_lv = [0.0 for _ in range(self.n_worker)]
+        self.ou_noise_av = [0.0 for _ in range(self.n_worker)]
         self.joint_goal = goals
         self.joint_initpose = initpose
         self.joint_cstate = [
@@ -142,7 +133,7 @@ class Coach():
             rospy.Publisher(
                 "/rosbot"+str(i+rtoffset)+"/cmd_vel", 
                 Twist, 
-                queue_size=1000
+                queue_size=10
             )
             for i in xrange(self.n_worker)
         ]
@@ -165,8 +156,7 @@ class Coach():
             for i in xrange(self.n_worker)
         ]
         self.reset_client = rospy.ServiceProxy(
-            "/gazebo/set_model_state",
-        SetModelState)  # controls all models
+            "/gazebo/set_model_state", SetModelState)  # controls all models
         self.load_lidar = [False for _ in xrange(self.n_worker)]
         self.load_odom = [False for _ in xrange(self.n_worker)]
         self.training_rate = rospy.Rate(30)
@@ -262,7 +252,7 @@ class Coach():
         self.t_testing = Thread(
             target=self.test
         )
-        self.model_save_path=model_save_path
+        self.model_save_path = model_save_path
         self.log_path = log_path
         self.log = open(self.log_path+self.name+'_'+datetime.datetime.now().strftime("%d-%m-%Y_%H:%M:%S")+'.txt','w+')
 
@@ -352,18 +342,17 @@ class Coach():
                     ind_batch=batch['index'][wi],
                     act_grads=act_grads[0]
                 )
-                self.tb_writer.add_summary(tb_loss, self.epoch)
+                self.tb_writer.add_summary(tb_loss,self.epoch)
                 for g in tb_pg:
-                    self.tb_writer.add_summary(g, self.epoch)
+                    self.tb_writer.add_summary(g,self.epoch)
             self.epoch += 1
             wi = (wi+1)%self.n_worker
             self.training_rate.sleep()
             
     #controls all the robots in an environment
     def interact_with_environment(self):
-        joint_traj = ["", "", ""]
-        joint_coll_dist = ["", "", ""]
-        joint_vel = ["", "", ""]
+        joint_traj = ["" for _ in range(self.n_worker)]
+        joint_coll_dist = ["" for _ in range(self.n_worker)]
         self.initMDP() #determine o_0,a_0
         while not rospy.is_shutdown():
             self.observe_state() 
@@ -382,11 +371,6 @@ class Coach():
                 joint_traj[i] += "%f;%f;"%(
                     self.joint_nstate[i].pose[0][0],
                     self.joint_nstate[i].pose[0][1]
-                )
-                joint_vel[i] += "%f;%f;%f;"%(
-                    self.joint_nstate[i].vel[0][0],
-                    self.joint_nstate[i].vel[0][1],
-                    self.joint_nstate[i].vel[0][2]
                 )
                 joint_coll_dist[i] += "%f;"%(self.joint_nstate[i].get_collision_distance())
             self.actuate(joint_next_action)
@@ -438,15 +422,8 @@ class Coach():
                             + str(self.eprwd) + "," 
                             + str(self.step) + ","
                             + str(self.collided) + ","
-                            + joint_traj[0] + ","
-                            + joint_traj[1] + ","
-                            + joint_traj[2] + ","
-                            + joint_vel[0] + ","
-                            + joint_vel[1] + ","
-                            + joint_vel[2] + ","
-                            + joint_coll_dist[0] + ","
-                            + joint_coll_dist[1] + ","
-                            + joint_coll_dist[2] + ","
+                            + ",".join(joint_traj) + ","
+                            + ",".join(joint_coll_dist)
                             + "\n")
                 if self.model_saver and (not self.collided) and self.terminal:  # completed navigation
                     self.model_saver.save(self.sess, self.model_save_path + "/"
@@ -455,9 +432,8 @@ class Coach():
                 self.step = 0
                 self.eprwd = 0
                 self.episode += 1
-                joint_traj = ["", "", ""]
-                joint_vel = ["", "", ""]
-                joint_coll_dist = ["", "", ""]
+                joint_traj = ["" for _ in range(self.n_worker)]
+                joint_coll_dist = ["" for _ in range(self.n_worker)]
                 self.reset_pose()
                 self.reset_state_action()
                 self.initMDP()
@@ -465,9 +441,8 @@ class Coach():
                 self.interact_rate.sleep()
 
     def test(self):
-        joint_traj = ["", "", ""]
-        joint_coll_dist = ["", "", ""]
-        joint_vel = ["", "", ""]
+        joint_traj = ["" for _ in range(self.n_worker)]
+        joint_coll_dist = ["" for _ in range(self.n_worker)]
         self.initMDP()
         while not rospy.is_shutdown():
             self.observe_state() 
@@ -483,12 +458,6 @@ class Coach():
                     self.joint_nstate[i].pose[0][0],
                     self.joint_nstate[i].pose[0][1]
                 )
-                joint_vel[i] += "%f;%f;%f;"%(
-                    self.joint_nstate[i].vel[0][0],
-                    self.joint_nstate[i].vel[0][1],
-                    self.joint_nstate[i].vel[0][2]
-                )
-                joint_coll_dist[i] += "%f;"%(self.joint_nstate[i].get_collision_distance())
             self.actuate(joint_next_action)
             (
                 self.joint_reward,
@@ -516,28 +485,19 @@ class Coach():
                             + str(self.eprwd) + "," 
                             + str(self.step) + ","
                             + str(self.collided) + ","
-                            + joint_traj[0] + ","
-                            + joint_traj[1] + ","
-                            + joint_traj[2] + ","
-                            + joint_vel[0] + ","
-                            + joint_vel[1] + ","
-                            + joint_vel[2] + ","
-                            + joint_coll_dist[0] + ","
-                            + joint_coll_dist[1] + ","
-                            + joint_coll_dist[2] + ","
+                            + ",".join(joint_traj) + ","
+                            + ",".join(joint_coll_dist)
                             + "\n")
                 self.step = 0
                 self.eprwd = 0
                 self.episode += 1
-                joint_traj = ["", "", ""]
-                joint_vel = ["", "", ""]
-                joint_coll_dist = ["", "", ""]
+                joint_traj = ["" for _ in range(self.n_worker)]
+                joint_coll_dist = ["" for _ in range(self.n_worker)]
                 self.reset_pose()
                 self.reset_state_action()
                 self.initMDP()
             else:
                 self.interact_rate.sleep()
-
 
     def initMDP(self):
         self.interact_rate.sleep() #reset loop timer to now
@@ -597,7 +557,7 @@ class Coach():
     #             ]
     #             - self.joint_goal[i]
     #         )
-    #         goal_rwd = 2.0*(cgoal_dist-ngoal_dist)
+    #         goal_rwd = (cgoal_dist-ngoal_dist)
     #         rwd = goal_rwd
     #         if self.joint_nstate[i].event==1:#collided
     #             rwd -= 1.0
@@ -613,13 +573,13 @@ class Coach():
 
     #     if all_reached_goal:
     #         for i in xrange(self.n_worker):
-    #             rewards[i] += 1.0
+    #             rewards[i] += 5.0
 
     #     terminal = int(all_reached_goal)
     #     return rewards, terminal, one_has_collided
 
     def receive_reward(self):
-    	rewards = []
+        rewards = []
         all_reached_goal = True
         one_has_collided = False
         for i in xrange(self.n_worker):
@@ -657,7 +617,7 @@ class Coach():
             rwd = (goal_rwd - trvl_rwd - coll_rwd)
 
             if self.joint_nstate[i].event==1:#collided
-                rwd -= 1.5
+                rwd -= 5.0
                 one_has_collided = True
             
             if self.reached_goal(
@@ -689,7 +649,6 @@ class Coach():
                     self.load_lidar[i]
                     | self.load_odom[i]
                 )
-
 
     #lidar callback for subscriber ith worker
     def lidar_receiver(self,msg,wi):
@@ -874,7 +833,7 @@ class Coach():
             -
             goal[0,:]
         )
-        return dist <= 0.8
+        return dist<=0.5
 
 if __name__ == '__main__':
     init_pose = np.array(

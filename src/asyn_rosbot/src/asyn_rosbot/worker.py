@@ -44,7 +44,8 @@ class Worker():
         master_actor,
         master_critic,
         training,
-        tb_writer
+        tb_writer,
+        log_path
     ):
         self.sess = sess
         self.name = name
@@ -149,6 +150,7 @@ class Worker():
         self.env_worker = Thread(target=self.interact_with_environment)
         self.train_worker = Thread(target=self.train)
         self.tb_writer = tb_writer
+        self.log_path = log_path
 
     def train(self):
         try:
@@ -225,61 +227,63 @@ class Worker():
 
 
     def interact_with_environment(self):
-        try:
-            while not rospy.is_shutdown():
-                self.actuate(self.action)
-                self.transit_state()
-                rwd,terminal = self.reward_model(self.state)
-                sars = {
-                        'cur_state':self.pre_state.clone(),
-                        'action':self.action.copy(),
-                        'reward':rwd, 
-                        'terminal':terminal,
-                        'next_state':self.state.clone()
-                }
-                self.training_q.put(sars)
-                self.pre_state.copy(self.state)#deepcopy
-                self.end_of_episode=terminal or self.step>self.max_step
-                if not self.end_of_episode:
-                    if self.replay_buffer.size()<self.min_repbuf_size:
-                        self.action[0][0] = rand.uniform(-1,1)
-                    else:
-                        self.action = self.actor.predict(
-                            self.state.obs_in(),
-                            self.state.vel_in(),
-                            self.state.dir_in()
-                        )  # 1x1
-                        self.action[0][0] += self.ornstein_uhlenbeck_noise()
-                        if self.action[0][0]>1:
-                            self.action[0][0] = 1
-                        if self.action[0][0]<-1:
-                            self.action[0][0] = -1
-                    self.step+=1
+        rewards = 0;
+        ep_rwd_log = open(
+            self.log_path
+            + self.name
+            + '_ep_rwd_train.csv','wb'
+        )
+        while not rospy.is_shutdown():
+            self.actuate(self.action)
+            self.transit_state()
+            rwd,terminal = self.reward_model(self.state)
+            sars = {
+                    'cur_state':self.pre_state.clone(),
+                    'action':self.action.copy(),
+                    'reward':rwd, 
+                    'terminal':terminal,
+                    'next_state':self.state.clone()
+            }
+            rewards += rwd
+            self.training_q.put(sars)
+            self.pre_state.copy(self.state)#deepcopy
+            self.end_of_episode=terminal or self.step>self.max_step
+            if not self.end_of_episode:
+                if self.replay_buffer.size()<self.min_repbuf_size:
+                    self.action[0][0] = rand.uniform(-1,1)
                 else:
-                    self.reset_pose()
-                    self.state.reset(
-                        goal=self.goal.copy(),
-                        pose=self.init_pose.copy()
-                    )
-                    self.pre_state.reset(
-                        goal=self.goal.copy(),
-                        pose=self.init_pose.copy()
-                    )
-                    self.action=np.zeros(
-                        shape=[1,1],
-                        dtype=float
-                    )
-                    self.episode += 1
-                    self.step = 0
-                self.training_rate.sleep()
-        except Exception as e:
-            print("%s interact_with_environment: %s"%(
-                    self.name,
-                    str(e)
+                    self.action = self.actor.predict(
+                        self.state.obs_in(),
+                        self.state.vel_in(),
+                        self.state.dir_in()
+                    )  # 1x1
+                    self.action[0][0] += self.ornstein_uhlenbeck_noise()
+                    if self.action[0][0]>1:
+                        self.action[0][0] = 1
+                    if self.action[0][0]<-1:
+                        self.action[0][0] = -1
+                self.step+=1
+            else:
+                self.reset_pose()
+                self.state.reset(
+                    goal=self.goal.copy(),
+                    pose=self.init_pose.copy()
                 )
-            )
-        finally:
-            print("%s env_worker: exits..."%(self.name))
+                self.pre_state.reset(
+                    goal=self.goal.copy(),
+                    pose=self.init_pose.copy()
+                )
+                self.action=np.zeros(
+                    shape=[1,1],
+                    dtype=float
+                )
+                self.episode += 1
+                self.step = 0
+                ep_rwd_log.write(str(rewards)+'\n')
+                rewards = 0
+            self.training_rate.sleep()
+        ep_rwd_log.close()
+        print("%s env_worker: exits..."%(self.name))
 
     def evaluate(self):
         succ = 0
@@ -423,12 +427,6 @@ class Worker():
             state.pose[0,0:3]-self.goal
         )
         return pre_goal_dist-cur_goal_dist
-
-    def feedback_receiver(self,msg):
-        feedback=Feedback()
-        feedback.load(msg.data)
-        feedback.set_sender(self.name)
-        self.feedback_q.put(feedback)
 
     def transit_state(self):
         rospy.sleep(self.state_trans_delay)

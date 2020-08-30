@@ -38,13 +38,7 @@
 * Created on: Oct 22, 2012
 * Author: Hongrong huang
 *
-* Edited on: Apr 21, 2019, by Zilong Jiao
-* 
-* The simulator is revised as an emulator for training reinforcement learning methods. 
-* Modifications: 
-*   - isolate ros-topics of a robot with its namespace for mutli-robot simulation
-*   - restrict a robot to have only FLYING_MODEL for collision avoidance research
-*   - revised reset function to incorporate the modification in robot state
+*
 */
 #include <hector_quadrotor_controller/quadrotor_simple_controller.h>
 #include "gazebo/common/Events.hh"
@@ -104,7 +98,7 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
   link=_model->GetChildLink("base_link");
   if (!link)
   {
-    ROS_FATAL("gazebo_ros_baro plugin error: bodyName does not exist\n");
+    ROS_FATAL("gazebo_ros_baro plugin error: bodyName: %s does not exist\n", link_name_.c_str());
     return;
   }
 
@@ -128,6 +122,7 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
   else
     motion_drift_noise_time_ = _sdf->GetElement("motionDriftNoiseTime")->Get<double>();
 
+
   controllers_.roll.Load(_sdf, "rollpitch");
   controllers_.pitch.Load(_sdf, "rollpitch");
   controllers_.yaw.Load(_sdf, "yaw");
@@ -139,7 +134,7 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
   inertia = link->GetInertial()->GetPrincipalMoments();
   mass = link->GetInertial()->GetMass();
 
-  node_handle_ = new ros::NodeHandle(robot_namespace_);
+  node_handle_ = new ros::NodeHandle(namespace_);
 
   // subscribe command: velocity control command
   if (!velocity_topic_.empty())
@@ -184,6 +179,7 @@ void GazeboQuadrotorSimpleController::Load(physics::ModelPtr _model, sdf::Elemen
 
     ROS_INFO_NAMED("quadrotor_simple_controller", "Using state information on topic %s as source of state information.", state_topic_.c_str());
   }
+  // callback_queue_thread_ = boost::thread( boost::bind( &GazeboQuadrotorSimpleController::CallbackQueueThread,this ) );
 
   Reset();
 

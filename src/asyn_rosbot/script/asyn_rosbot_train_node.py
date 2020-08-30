@@ -119,7 +119,8 @@ evaluator=Worker(
     master_actor=master_actor,
     master_critic=master_critic,
     training=False,
-    tb_writer=tb_writer
+    tb_writer=tb_writer,
+    log_path=log_path
 )
 
 def evaluate_master_network(itr):
@@ -173,7 +174,8 @@ def main():
             master_actor=master_actor,
             master_critic=master_critic,
             training=True,
-            tb_writer=tb_writer
+            tb_writer=tb_writer,
+            log_path=log_path
         )
         workers.append(worker)
     sess.run(tf.global_variables_initializer())

@@ -376,12 +376,18 @@ class CriticNetwork():
                 self.obs0_in,
                 self.obs1_in,
                 self.obs2_in,
+                self.obs3_in,
+                self.obs4_in,
                 self.dir0_in,
                 self.dir1_in,
                 self.dir2_in,
+                self.dir3_in,
+                self.dir4_in,
                 self.act0_in,
                 self.act1_in,
                 self.act2_in,
+                self.act3_in,
+                self.act4_in,
                 self.ind_in,
                 self.q_out
             ) = self.build_network(rnn_scope=self.name)
@@ -392,12 +398,18 @@ class CriticNetwork():
                 self.target_obs0_in,
                 self.target_obs1_in,
                 self.target_obs2_in,
+                self.target_obs3_in,
+                self.target_obs4_in,
                 self.target_dir0_in,
                 self.target_dir1_in,
                 self.target_dir2_in,
+                self.target_dir3_in,
+                self.target_dir4_in,
                 self.target_act0_in,
                 self.target_act1_in,
                 self.target_act2_in,
+                self.target_act3_in,
+                self.target_act4_in,
                 self.target_ind_in,
                 self.target_q_out
             ) = self.build_network(rnn_scope=self.name+'_target')
@@ -431,6 +443,8 @@ class CriticNetwork():
             self.action0_grads = tf.gradients(self.q_out, self.act0_in)
             self.action1_grads = tf.gradients(self.q_out, self.act1_in)
             self.action2_grads = tf.gradients(self.q_out, self.act2_in)
+            self.action3_grads = tf.gradients(self.q_out, self.act3_in)
+            self.action4_grads = tf.gradients(self.q_out, self.act4_in)
             self.master_network = master_network
             if not master_network==None:
                 self.apply_grads = self.optimizer.apply_gradients(
@@ -495,6 +509,22 @@ class CriticNetwork():
                 self.obs_dim
             ]
         )
+        obs3_in = tf.placeholder(
+            dtype=tf.float32,
+            shape=[
+                self.time_step,
+                None,
+                self.obs_dim
+            ]
+        )
+        obs4_in = tf.placeholder(
+            dtype=tf.float32,
+            shape=[
+                self.time_step,
+                None,
+                self.obs_dim
+            ]
+        )
         dir0_in = tf.placeholder(
             dtype=tf.float32,
             shape=[
@@ -512,6 +542,22 @@ class CriticNetwork():
             ]
         )
         dir2_in = tf.placeholder(
+            dtype=tf.float32,
+            shape=[
+                1,
+                None,
+                self.dir_dim
+            ]
+        )
+        dir3_in = tf.placeholder(
+            dtype=tf.float32,
+            shape=[
+                1,
+                None,
+                self.dir_dim
+            ]
+        )
+        dir4_in = tf.placeholder(
             dtype=tf.float32,
             shape=[
                 1,
@@ -543,6 +589,22 @@ class CriticNetwork():
                 self.act_dim
             ]
         )
+        act3_in = tf.placeholder(
+            dtype=tf.float32,
+            shape=[
+                1,
+                None,
+                self.act_dim
+            ]
+        )
+        act4_in = tf.placeholder(
+            dtype=tf.float32,
+            shape=[
+                1,
+                None,
+                self.act_dim
+            ]
+        )
         ind_in = tf.placeholder(
             dtype=tf.float32,
             shape=[
@@ -555,7 +617,9 @@ class CriticNetwork():
             [
                 dir0_in,
                 dir1_in,
-                dir2_in
+                dir2_in,
+                dir3_in,
+                dir4_in
             ],
             2
         )
@@ -563,11 +627,12 @@ class CriticNetwork():
             [
                 act0_in,
                 act1_in,
-                act2_in
+                act2_in,
+                act3_in,
+                act4_in
             ],
             2
         )
-
         lstm0 = tf.contrib.rnn.BasicLSTMCell(
             num_units=self.lstm_state_size
         )
@@ -613,11 +678,42 @@ class CriticNetwork():
             scope=rnn_scope+'2'
         )
 
+        lstm3 = tf.contrib.rnn.BasicLSTMCell(
+            num_units=self.lstm_state_size
+        )
+        lstm3 = tf.nn.rnn_cell.DropoutWrapper(
+            lstm3, 
+            state_keep_prob=0.6
+        )
+        lstm_in_3 = tf.reverse(obs3_in, [0])    
+        h3, _ = tf.nn.static_rnn(
+            cell=lstm3,
+            inputs=tf.unstack(lstm_in_3),
+            dtype=tf.float32,
+            scope=rnn_scope+'3'
+        )
+
+        lstm4 = tf.contrib.rnn.BasicLSTMCell(
+            num_units=self.lstm_state_size
+        )
+        lstm4 = tf.nn.rnn_cell.DropoutWrapper(
+            lstm4, 
+            state_keep_prob=0.6
+        )
+        lstm_in_4 = tf.reverse(obs4_in, [0])    
+        h4, _ = tf.nn.static_rnn(
+            cell=lstm4,
+            inputs=tf.unstack(lstm_in_4),
+            dtype=tf.float32,
+            scope=rnn_scope+'4'
+        )
         fc1_in = tf.concat(
             [
                 h0[-1], 
                 h1[-1], 
-                h2[-1], 
+                h2[-1],
+                h3[-1],
+                h4[-1], 
                 joint_dir_in[0,:,:], 
                 joint_act_in[0,:,:], 
                 ind_in[0,:,:]
@@ -655,9 +751,9 @@ class CriticNetwork():
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
-        return (obs0_in,obs1_in,obs2_in,
-                dir0_in,dir1_in,dir2_in,
-                act0_in,act1_in,act2_in,
+        return (obs0_in,obs1_in,obs2_in,obs3_in,obs4_in,
+                dir0_in,dir1_in,dir2_in,dir3_in,dir4_in,
+                act0_in,act1_in,act2_in,act3_in,act4_in,
                 ind_in,q_out)
 
     def train(
@@ -674,12 +770,18 @@ class CriticNetwork():
                 self.obs0_in: obs_batch[0],
                 self.obs1_in: obs_batch[1],
                 self.obs2_in: obs_batch[2],
+                self.obs3_in: obs_batch[3],
+                self.obs4_in: obs_batch[4],
                 self.dir0_in: dir_batch[0],
                 self.dir1_in: dir_batch[1],
                 self.dir2_in: dir_batch[2],
+                self.dir3_in: dir_batch[3],
+                self.dir4_in: dir_batch[4],
                 self.act0_in: act_batch[0],
                 self.act1_in: act_batch[1],
                 self.act2_in: act_batch[2],
+                self.act3_in: act_batch[3],
+                self.act4_in: act_batch[4],
                 self.ind_in: ind_batch,
                 self.target_q_value: tar_q_batch
             }
@@ -698,12 +800,18 @@ class CriticNetwork():
                 self.obs0_in: obs_batch[0],
                 self.obs1_in: obs_batch[1],
                 self.obs2_in: obs_batch[2],
+                self.obs3_in: obs_batch[3],
+                self.obs4_in: obs_batch[4],
                 self.dir0_in: dir_batch[0],
                 self.dir1_in: dir_batch[1],
                 self.dir2_in: dir_batch[2],
+                self.dir3_in: dir_batch[3],
+                self.dir4_in: dir_batch[4],
                 self.act0_in: act_batch[0],
                 self.act1_in: act_batch[1],
                 self.act2_in: act_batch[2],
+                self.act3_in: act_batch[3],
+                self.act4_in: act_batch[4],
                 self.ind_in: ind_batch
             }
         )
@@ -721,12 +829,18 @@ class CriticNetwork():
                 self.target_obs0_in: obs_batch[0],
                 self.target_obs1_in: obs_batch[1],
                 self.target_obs2_in: obs_batch[2],
+                self.target_obs3_in: obs_batch[3],
+                self.target_obs4_in: obs_batch[4],
                 self.target_dir0_in: dir_batch[0],
                 self.target_dir1_in: dir_batch[1],
                 self.target_dir2_in: dir_batch[2],
+                self.target_dir3_in: dir_batch[3],
+                self.target_dir4_in: dir_batch[4],
                 self.target_act0_in: act_batch[0],
                 self.target_act1_in: act_batch[1],
                 self.target_act2_in: act_batch[2],
+                self.target_act3_in: act_batch[3],
+                self.target_act4_in: act_batch[4],
                 self.target_ind_in: ind_batch
             }
         )
@@ -746,12 +860,18 @@ class CriticNetwork():
                     self.obs0_in: obs_batch[0],
                     self.obs1_in: obs_batch[1],
                     self.obs2_in: obs_batch[2],
+                    self.obs3_in: obs_batch[3],
+                    self.obs4_in: obs_batch[4],
                     self.dir0_in: dir_batch[0],
                     self.dir1_in: dir_batch[1],
                     self.dir2_in: dir_batch[2],
+                    self.dir3_in: dir_batch[3],
+                    self.dir4_in: dir_batch[4],
                     self.act0_in: act_batch[0],
                     self.act1_in: act_batch[1],
                     self.act2_in: act_batch[2],
+                    self.act3_in: act_batch[3],
+                    self.act4_in: act_batch[4],
                     self.ind_in: ind_batch
                 }
             )
@@ -762,12 +882,18 @@ class CriticNetwork():
                     self.obs0_in: obs_batch[0],
                     self.obs1_in: obs_batch[1],
                     self.obs2_in: obs_batch[2],
+                    self.obs3_in: obs_batch[3],
+                    self.obs4_in: obs_batch[4],
                     self.dir0_in: dir_batch[0],
                     self.dir1_in: dir_batch[1],
                     self.dir2_in: dir_batch[2],
+                    self.dir3_in: dir_batch[3],
+                    self.dir4_in: dir_batch[4],
                     self.act0_in: act_batch[0],
                     self.act1_in: act_batch[1],
                     self.act2_in: act_batch[2],
+                    self.act3_in: act_batch[3],
+                    self.act4_in: act_batch[4],
                     self.ind_in: ind_batch
                 }
             )
@@ -778,12 +904,62 @@ class CriticNetwork():
                     self.obs0_in: obs_batch[0],
                     self.obs1_in: obs_batch[1],
                     self.obs2_in: obs_batch[2],
+                    self.obs3_in: obs_batch[3],
+                    self.obs4_in: obs_batch[4],
                     self.dir0_in: dir_batch[0],
                     self.dir1_in: dir_batch[1],
                     self.dir2_in: dir_batch[2],
+                    self.dir3_in: dir_batch[3],
+                    self.dir4_in: dir_batch[4],
                     self.act0_in: act_batch[0],
                     self.act1_in: act_batch[1],
                     self.act2_in: act_batch[2],
+                    self.act3_in: act_batch[3],
+                    self.act4_in: act_batch[4],
+                    self.ind_in: ind_batch
+                }
+            )
+        if ind_scalar==3:
+            return self.sess.run(
+                self.action3_grads, 
+                feed_dict={
+                    self.obs0_in: obs_batch[0],
+                    self.obs1_in: obs_batch[1],
+                    self.obs2_in: obs_batch[2],
+                    self.obs3_in: obs_batch[3],
+                    self.obs4_in: obs_batch[4],
+                    self.dir0_in: dir_batch[0],
+                    self.dir1_in: dir_batch[1],
+                    self.dir2_in: dir_batch[2],
+                    self.dir3_in: dir_batch[3],
+                    self.dir4_in: dir_batch[4],
+                    self.act0_in: act_batch[0],
+                    self.act1_in: act_batch[1],
+                    self.act2_in: act_batch[2],
+                    self.act3_in: act_batch[3],
+                    self.act4_in: act_batch[4],
+                    self.ind_in: ind_batch
+                }
+            )
+        if ind_scalar==4:
+            return self.sess.run(
+                self.action4_grads, 
+                feed_dict={
+                    self.obs0_in: obs_batch[0],
+                    self.obs1_in: obs_batch[1],
+                    self.obs2_in: obs_batch[2],
+                    self.obs3_in: obs_batch[3],
+                    self.obs4_in: obs_batch[4],
+                    self.dir0_in: dir_batch[0],
+                    self.dir1_in: dir_batch[1],
+                    self.dir2_in: dir_batch[2],
+                    self.dir3_in: dir_batch[3],
+                    self.dir4_in: dir_batch[4],
+                    self.act0_in: act_batch[0],
+                    self.act1_in: act_batch[1],
+                    self.act2_in: act_batch[2],
+                    self.act3_in: act_batch[3],
+                    self.act4_in: act_batch[4],
                     self.ind_in: ind_batch
                 }
             )
@@ -808,12 +984,18 @@ class CriticNetwork():
                 self.obs0_in: obs_batch[0],
                 self.obs1_in: obs_batch[1],
                 self.obs2_in: obs_batch[2],
+                self.obs3_in: obs_batch[3],
+                self.obs4_in: obs_batch[4],
                 self.dir0_in: dir_batch[0],
                 self.dir1_in: dir_batch[1],
                 self.dir2_in: dir_batch[2],
+                self.dir3_in: dir_batch[3],
+                self.dir4_in: dir_batch[4],
                 self.act0_in: act_batch[0],
                 self.act1_in: act_batch[1],
                 self.act2_in: act_batch[2],
+                self.act3_in: act_batch[3],
+                self.act4_in: act_batch[4],
                 self.ind_in: ind_batch,
                 self.target_q_value: tar_q_batch
             }
@@ -854,12 +1036,18 @@ class CriticNetwork():
                 self.obs0_in: obs_batch[0],
                 self.obs1_in: obs_batch[1],
                 self.obs2_in: obs_batch[2],
+                self.obs3_in: obs_batch[3],
+                self.obs4_in: obs_batch[4],
                 self.dir0_in: dir_batch[0],
                 self.dir1_in: dir_batch[1],
                 self.dir2_in: dir_batch[2],
+                self.dir3_in: dir_batch[3],
+                self.dir4_in: dir_batch[4],
                 self.act0_in: act_batch[0],
                 self.act1_in: act_batch[1],
                 self.act2_in: act_batch[2],
+                self.act3_in: act_batch[3],
+                self.act4_in: act_batch[4],
                 self.ind_in: ind_batch,
                 self.target_q_value: tar_q_batch
             }

@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Include the world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find maddpg_rosbot)/worlds/train_empty.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <!-- send the robot XML to param server -->
+  <arg name="model_urdf" value="$(find rosbot_description)/urdf/rosbot.xacro"/>
+
+  <!-- Spawn 1st simulated rosbot--> 
+  <group ns="rosbot0">  
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot0" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 1.5 
+                -y 0.0
+                -z 0
+                -R 0
+                -P 0 
+                -Y -3.14
+                -model rosbot0"
+           respawn="false" output="screen"/>
+  </group> 
+
+  <!-- Spawn 2nd simulated rosbot -->
+  <group ns="rosbot1">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot1" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 0.46352549156242118
+                -y 1.4265847744427302
+                -z 0
+                -R 0
+                -P 0 
+                -Y -1.9
+                -model rosbot1"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 3rd simulated rosbot -->
+  <group ns="rosbot2">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot2" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x -1.213525491562421 
+                -y 0.88167787843870982
+                -z 0
+                -R 0
+                -P 0 
+                -Y -0.864785
+                -model rosbot2"
+          respawn="false" output="screen"/>
+  </group>
+
+  <!-- Spawn 4th simulated rosbot -->
+  <group ns="rosbot3">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot3" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x -1.2135254915624214
+                -y -0.88167787843870959
+                -z 0
+                -R 0
+                -P 0 
+                -Y 0.785838
+                -model rosbot3"
+          respawn="false" output="screen"/> 
+  </group>
+
+  <!-- Spawn 5th simulated rosbot -->
+  <group ns="rosbot4">
+    <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
+    <node name="spawn_robot_rosbot4" pkg="gazebo_ros" type="spawn_model"
+          args="-param robot_description
+                -urdf
+                -x 0.46352549156242084 
+                -y -1.4265847744427305
+                -z 0
+                -R 0
+                -P 0 
+                -Y 2.010268
+                -model rosbot4"
+          respawn="false" output="screen"/>
+  </group>
+  
+  <node pkg="maddpg_rosbot" type="maddpg_rosbot_train_5bot_node.py" name="maddpg_rosbot_train_5bot_node" output="screen"/>
+</launch>

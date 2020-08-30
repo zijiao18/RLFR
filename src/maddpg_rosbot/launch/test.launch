@@ -111,7 +111,7 @@
           respawn="false" output="screen"/>
   </group>
 
-  <!-- Spawn 6th simulated quadrotor uav -->
+  <!-- Spawn 7th simulated quadrotor uav -->
   <group ns="rosbot6">
     <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
     <node name="spawn_robot_rosbot6" pkg="gazebo_ros" type="spawn_model"
@@ -127,7 +127,7 @@
           respawn="false" output="screen"/>
   </group>
 
-  <!-- Spawn 6th simulated quadrotor uav -->
+  <!-- Spawn 8th simulated quadrotor uav -->
   <group ns="rosbot7">
     <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
     <node name="spawn_robot_rosbot7" pkg="gazebo_ros" type="spawn_model"
@@ -143,7 +143,7 @@
           respawn="false" output="screen"/>
   </group>
 
-  <!-- Spawn 6th simulated quadrotor uav -->
+  <!-- Spawn 9th simulated quadrotor uav -->
   <group ns="rosbot8">
     <param name="robot_description" command="$(find xacro)/xacro.py '$(arg model_urdf)'"/>
     <node name="spawn_robot_rosbot8" pkg="gazebo_ros" type="spawn_model"

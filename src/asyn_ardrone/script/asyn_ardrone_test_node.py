@@ -9,99 +9,71 @@ from asyn_ardrone.ddpg_network import (
 )
 from asyn_ardrone.worker import Worker
 
-model_path = ''
+rospy.init_node("asyn_ardrone_test_node")
+model_restore_path = ''
+model_save_path = ''
 log_path = ''
+tb_writer_path = ''
 
-def log_episode_info(
-    log,
-    ep_rwd,
-    ep_step,
-    avg_loss,
-    actions,
-    traj,
-    succ
-):
-    act_str = ""
-    for a in actions:
-        act_str += (str(a)+",")
-    traj_str=""
-    for t in traj:
-        traj_str += (str(t[0])
-                    + ","
-                    + str(t[1])
-                    + ","
-                    + str(t[2])
-                    + ",")
-    log.writerow(
-        [
-            str(ep_rwd),
-            str(ep_step),
-            str(avg_loss),
-            str(succ),
-            act_str[:-1],
-            traj_str[:-1]
-        ]
-    )
+# the config below must match the config in the training script 
+vel_dim = 6  
+pos_dim = 3  
+act_dim = 2  
+obs_dim = 180 
+obs_seqlen = 4
+batch_size = 256
+
+actor_lstm_state_dim = 128
+actor_fc1_unit = 512
+actor_fc2_unit = 512
+critic_lstm_state_dim = 512  
+critic_fc1_unit = 1024
+critic_fc2_unit = 1024
+
+actor_lr = 0.0001
+critic_lr = 0.001
+actor_tau = 0.01
+critic_tau = 0.01
+sess = tf.Session()
+tb_writer = tf.summary.FileWriter(tb_writer_path)
+evaluator = Worker(
+    sess=sess,
+    name="ardrone"+str(n_worker),
+    init_pose=np.array([[-39.0,9.5,0.0,0,0,-1.57]],dtype=float),
+    goal=np.array([[-11.0,-9.5,0.0]]),,
+    act_dim=act_dim,
+    pos_dim=pos_dim,
+    vel_dim=vel_dim,
+    obs_dim=obs_dim,
+    obs_seqlen=obs_seqlen,
+    batch_size=batch_size,
+    actor_lstm_state_dim=actor_lstm_state_dim,
+    critic_lstm_state_dim=critic_lstm_state_dim,
+    actor_fc1_unit=actor_fc1_unit,
+    actor_fc2_unit=actor_fc2_unit,
+    critic_fc1_unit=critic_fc1_unit,
+    critic_fc2_unit=critic_fc2_unit,
+    actor_lr=actor_lr,
+    critic_lr=critic_lr,
+    actor_tau=actor_tau,
+    critic_tau=critic_tau,
+    master_actor=master_actor,
+    master_critic=master_critic,
+    training=True,
+    model_saver = saver,
+    tb_writer=tb_writer,
+    model_save_path = model_save_path,
+    log_path=log_path
+)
+saver = tf.train.Saver(evaluator.actor.net_params + evaluator.critic.net_params)
 
 def main():
-    rospy.init_node("asyn_ardrone_test_node")
-    ros_rate = rospy.Rate(0.2)
-    sess = tf.Session()
-    evaluator = Worker(
-        sess=sess,
-        name="master",
-        init_pose=np.array(
-            [[-39.0,9.5,0.0,0,0,-1.57]],
-            dtype=float
-        ),
-        goal=np.array([[-11.0,-9.5,0.0]]),
-        master_actor=None,
-        master_critic=None,
-        training=False,
-        tb_writer=None
-    )
     sess.run(tf.global_variables_initializer())
-    saver = tf.train.Saver(
-        evaluator.actor.net_params+evaluator.critic.net_params
-    )
-    saver.restore(
-        sess,
-        model_path
-    )
-    csv_file = open(log_path,'wb')
-    test_log = csv.writer(
-        csv_file,
-        delimiter=',', 
-        quotechar='"', 
-        quoting=csv.QUOTE_MINIMAL
-    )
-    itr = 0
-    while itr<1:
-        (
-            ep_rwd,
-            ep_step,
-            avg_loss,
-            actions,
-            traj,
-            succ
-        ) = evaluator.evaluate()
-        print("eval the master networks: ")
-        print("ep_rwd: ",ep_rwd)
-        print("ep_step: ", ep_step)
-        print("avg_loss: ", avg_loss)
-        print("actions: ",actions)
-        print("--------------------------")
-        log_episode_info(
-            test_log,
-            ep_rwd,
-            ep_step,
-            avg_loss,
-            actions,
-            traj,
-            succ
-        )
-        itr += 1
-        rospy.sleep(2)
+    saver.restore(sess, model_restore_path)
+    print("restored model...")
+    n_ep = 1
+    for _ in range(n_ep):
+        evaluator.evaluate()
 
 if __name__ == '__main__':
     main()

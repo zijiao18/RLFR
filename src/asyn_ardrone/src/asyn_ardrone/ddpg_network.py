@@ -11,6 +11,7 @@ class ActorNetwork():
         obs_dim,
         vel_dim,
         dir_dim,
+        act_dim,
         batch_size,
         lstm_state_dim,
         n_fc1_unit,
@@ -22,7 +23,7 @@ class ActorNetwork():
     ):
         self.sess = sess
         self.name = name
-        self.act_dim = 1
+        self.act_dim = act_dim
         self.obs_dim = obs_dim
         self.vel_dim = vel_dim
         self.dir_dim = dir_dim
@@ -38,7 +39,6 @@ class ActorNetwork():
         print("%s has params offset %d"%(name, self.net_param_offset))
         (
             self.obs_in, 
-            self.vel_in, 
             self.dir_in, 
             self.act_out
         ) = self.build_network(self.name)
@@ -47,7 +47,6 @@ class ActorNetwork():
         ]
         (
             self.target_obs_in, 
-            self.target_vel_in, 
             self.target_dir_in, 
             self.target_act_out
         ) = self.build_network(self.name+'_target')
@@ -103,6 +102,17 @@ class ActorNetwork():
                 ) 
                 for i in range(len(self.master_network.net_params))
             ]
+            self.init_target_net_params = [
+                self.target_net_params[i].assign(self.master_network.net_params[i]) 
+                for i in range(len(self.master_network.net_params))
+            ]
+        self.tb_actor_norm_gradients = [
+            tf.summary.histogram(
+                self.name+'_pg_'+self.name, 
+                self.actor_norm_gradients[i]
+            ) 
+            for i in xrange(len(self.actor_norm_gradients))
+        ]
 
     def build_network(self,rnn_scope):
         obs_in = tf.placeholder(
@@ -113,14 +123,14 @@ class ActorNetwork():
                 self.obs_dim
             ]
         )
-        vel_in = tf.placeholder(
-            dtype=tf.float32,
-            shape=[
-                1,
-                None,
-                self.vel_dim
-            ]
-        )
+        # vel_in = tf.placeholder(
+        #     dtype=tf.float32,
+        #     shape=[
+        #         1,
+        #         None,
+        #         self.vel_dim
+        #     ]
+        # )
         dir_in = tf.placeholder(
             dtype=tf.float32,
             shape=[
@@ -144,15 +154,22 @@ class ActorNetwork():
             dtype=tf.float32,
             scope=rnn_scope
         )
+        # fc1_in = tf.concat(
+        #     [
+        #         tf.concat(
+        #             [
+        #                 hs[-1],
+        #                 vel_in[0,:,:] 
+        #             ],
+        #             1
+        #         ),
+        #         dir_in[0,:,:]
+        #     ],
+        #     1
+        # )
         fc1_in = tf.concat(
             [
-                tf.concat(
-                    [
-                        hs[-1],
-                        vel_in[0,:,:] 
-                    ],
-                    1
-                ),
+                hs[-1],
                 dir_in[0,:,:]
             ],
             1
@@ -166,7 +183,7 @@ class ActorNetwork():
         )
         fc1 = tf.layers.dropout(
             inputs=fc1,
-            rate=0.2,
+            rate=0.4,
             training=self.training
         )
         fc2 = tf.layers.dense(
@@ -178,22 +195,22 @@ class ActorNetwork():
         )
         fc2 = tf.layers.dropout(
             inputs=fc2,
-            rate=0.2,
+            rate=0.4,
             training=self.training
         )
+
         act_out = tf.layers.dense(
             inputs=fc2,
-            units=self.act_dim,
+            units=1,
             activation=tf.nn.tanh,
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
-        return obs_in, vel_in, dir_in, act_out
+        return obs_in, dir_in, act_out
 
     def train(
         self, 
         obs_batch,
-        vel_batch,
         dir_batch,
         act_grads
     ):
@@ -201,7 +218,6 @@ class ActorNetwork():
             self.optimize, 
             feed_dict={
                 self.obs_in: obs_batch,
-                self.vel_in: vel_batch,
                 self.dir_in: dir_batch,
                 self.action_gradients: act_grads
             }
@@ -210,7 +226,6 @@ class ActorNetwork():
     def update_master_network(
         self,
         obs_batch,
-        vel_batch,
         dir_batch,
         act_grads
     ):
@@ -218,7 +233,6 @@ class ActorNetwork():
             self.apply_grads, 
             feed_dict={
                 self.obs_in: obs_batch,
-                self.vel_in: vel_batch,
                 self.dir_in: dir_batch,
                 self.action_gradients: act_grads
             }
@@ -227,14 +241,12 @@ class ActorNetwork():
     def predict(
         self, 
         obs_batch,
-        vel_batch,
         dir_batch
     ):
         return self.sess.run(
             self.act_out, 
             feed_dict={
                 self.obs_in: obs_batch,
-                self.vel_in: vel_batch,
                 self.dir_in: dir_batch
             }
         )   
@@ -242,20 +254,21 @@ class ActorNetwork():
     def predict_target(
         self, 
         obs_batch,
-        vel_batch,
         dir_batch
     ):
         return self.sess.run(
             self.target_act_out, 
             feed_dict={
                 self.target_obs_in: obs_batch,
-                self.target_vel_in: vel_batch,
                 self.target_dir_in: dir_batch
             }
         )
 
     def update_target_network(self):
         self.sess.run(self.update_target_net_params)
+
+    def init_target_network(self):
+        self.sess.run(self.init_target_net_params)
 
     def get_num_trainable_vars(self):
         return self.num_trainable_vars
@@ -281,6 +294,20 @@ class ActorNetwork():
                 )
             )
 
+    def summary(
+        self,
+        obs_batch,
+        dir_batch,
+        act_grads
+    ):
+        return self.sess.run(
+            self.tb_actor_norm_gradients, 
+            feed_dict={
+                self.obs_in: obs_batch,
+                self.dir_in: dir_batch,
+                self.action_gradients: act_grads
+            }
+        )
 
 class CriticNetwork():
 
@@ -292,6 +319,7 @@ class CriticNetwork():
         obs_dim,
         vel_dim,
         dir_dim,
+        act_dim,
         batch_size,
         lstm_state_dim,
         n_fc1_unit,
@@ -303,7 +331,7 @@ class CriticNetwork():
     ):
         self.sess = sess
         self.name = name
-        self.act_dim = 1
+        self.act_dim = act_dim
         self.obs_dim = obs_dim
         self.vel_dim = vel_dim
         self.dir_dim = dir_dim
@@ -319,7 +347,6 @@ class CriticNetwork():
         print("%s has params offset %d"%(name, self.net_param_offset))
         (
             self.obs_in, 
-            self.vel_in, 
             self.dir_in, 
             self.act_in, 
             self.q_out
@@ -327,7 +354,6 @@ class CriticNetwork():
         self.net_params = tf.trainable_variables()[self.net_param_offset:]
         (
             self.target_obs_in, 
-            self.target_vel_in, 
             self.target_dir_in, 
             self.target_act_in,
             self.target_q_out
@@ -387,6 +413,15 @@ class CriticNetwork():
                 ) 
                 for i in range(len(self.net_params))
             ]
+            self.init_target_net_params = [
+                self.target_net_params[i].assign(self.master_network.net_params[i]) 
+                for i in range(len(self.master_network.net_params))
+            ]
+
+        self.tb_loss = tf.summary.scalar(
+            self.name+'_loss',
+            self.loss
+        )
 
     def build_network(self,rnn_scope):
         obs_in = tf.placeholder(
@@ -397,14 +432,14 @@ class CriticNetwork():
                     self.obs_dim
             ]
         )
-        vel_in = tf.placeholder(
-            dtype=tf.float32,
-            shape=[
-                1,
-                None,
-                self.vel_dim
-            ]
-        )
+        # vel_in = tf.placeholder(
+        #     dtype=tf.float32,
+        #     shape=[
+        #         1,
+        #         None,
+        #         self.vel_dim
+        #     ]
+        # )
         dir_in = tf.placeholder(
             dtype=tf.float32,
             shape=[
@@ -435,22 +470,30 @@ class CriticNetwork():
             dtype=tf.float32,
             scope=rnn_scope
         )
-        state = tf.concat(
-            [
-                hs[-1],
-                tf.concat(
-                    [
-                        vel_in[0,:,:],
-                        dir_in[0,:,:]
-                    ],
-                    1
-                )
-            ],
-            1
-        )
+        # state = tf.concat(
+        #     [
+        #         hs[-1],
+        #         tf.concat(
+        #             [
+        #                 vel_in[0,:,:],
+        #                 dir_in[0,:,:]
+        #             ],
+        #             1
+        #         )
+        #     ],
+        #     1
+        # )
+        # fc1_in = tf.concat(
+        #     [
+        #         state,
+        #         act_in[0,:,:]
+        #     ],
+        #     1
+        # )
         fc1_in = tf.concat(
             [
-                state,
+                hs[-1],
+                dir_in[0,:,:],
                 act_in[0,:,:]
             ],
             1
@@ -464,7 +507,7 @@ class CriticNetwork():
         )
         fc1 = tf.layers.dropout(
             inputs=fc1,
-            rate=0.2,
+            rate=0.4,
             training=self.training
         )
         fc2 = tf.layers.dense(
@@ -476,7 +519,7 @@ class CriticNetwork():
         )
         fc2 = tf.layers.dropout(
             inputs=fc2,
-            rate=0.2,
+            rate=0.4,
             training=self.training
         )
         q_out = tf.layers.dense(
@@ -486,12 +529,11 @@ class CriticNetwork():
             kernel_initializer=tf.keras.initializers.he_normal(),
             bias_initializer=tf.initializers.zeros()
         )
-        return obs_in, vel_in, dir_in, act_in, q_out
+        return obs_in, dir_in, act_in, q_out
 
     def train(
         self, 
         obs_batch,
-        vel_batch,
         dir_batch,
         act_batch,
         tar_q_batch
@@ -500,7 +542,6 @@ class CriticNetwork():
             [self.q_out, self.optimize], 
             feed_dict={
                 self.obs_in: obs_batch,
-                self.vel_in: vel_batch,
                 self.dir_in: dir_batch,
                 self.act_in: act_batch,
                 self.target_q_value: tar_q_batch
@@ -510,7 +551,6 @@ class CriticNetwork():
     def predict(
         self, 
         obs_batch,
-        vel_batch,
         dir_batch,
         act_batch
     ):
@@ -518,7 +558,6 @@ class CriticNetwork():
             self.q_out, 
             feed_dict={
                 self.obs_in: obs_batch,
-                self.vel_in: vel_batch,
                 self.dir_in: dir_batch,
                 self.act_in: act_batch
             }
@@ -527,7 +566,6 @@ class CriticNetwork():
     def predict_target(
         self, 
         obs_batch,
-        vel_batch,
         dir_batch,
         act_batch
     ):
@@ -535,7 +573,6 @@ class CriticNetwork():
             self.target_q_out, 
             feed_dict={
                 self.target_obs_in: obs_batch,
-                self.target_vel_in: vel_batch,
                 self.target_dir_in: dir_batch,
                 self.target_act_in: act_batch
             }
@@ -544,7 +581,6 @@ class CriticNetwork():
     def action_gradients(
         self, 
         obs_batch, 
-        vel_batch, 
         dir_batch, 
         act_batch
     ):
@@ -552,7 +588,6 @@ class CriticNetwork():
             self.action_grads, 
             feed_dict={
                 self.obs_in: obs_batch, 
-                self.vel_in: vel_batch,
                 self.dir_in: dir_batch,
                 self.act_in: act_batch
             }
@@ -561,10 +596,12 @@ class CriticNetwork():
     def update_target_network(self):
         self.sess.run(self.update_target_net_params)
 
+    def init_target_network(self):
+        self.sess.run(self.init_target_net_params)
+
     def update_master_network(
         self,
         obs_batch,
-        vel_batch,
         dir_batch,
         act_batch,
         tar_q_batch
@@ -573,7 +610,6 @@ class CriticNetwork():
             self.apply_grads, 
             feed_dict={
                 self.obs_in: obs_batch,
-                self.vel_in: vel_batch,
                 self.dir_in: dir_batch,
                 self.act_in: act_batch,
                 self.target_q_value: tar_q_batch
@@ -600,4 +636,21 @@ class CriticNetwork():
                     self.name+' target_net_params'
                 )
             )
+
+    def summary(
+        self, 
+        obs_batch,
+        dir_batch,
+        act_batch,
+        tar_q_batch
+    ):
+        return self.sess.run(
+            [self.tb_loss], 
+            feed_dict={
+                self.obs_in: obs_batch,
+                self.dir_in: dir_batch,
+                self.act_in: act_batch,
+                self.target_q_value: tar_q_batch
+            }
+        )
 

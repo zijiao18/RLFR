@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import random as rand
 import Queue
+import datetime
 from threading import Thread
 from geometry_msgs.msg import Twist
 from std_msgs.msg import (
@@ -26,51 +27,146 @@ class Worker():
         name,
         init_pose,
         goal,
+        act_dim,
+        pos_dim,
+        vel_dim,
+        obs_dim,
+        obs_seqlen,
+        batch_size,
+        actor_lstm_state_dim,
+        critic_lstm_state_dim,
+        actor_fc1_unit,
+        actor_fc2_unit,
+        critic_fc1_unit,
+        critic_fc2_unit,
+        actor_lr,
+        critic_lr,
+        actor_tau,
+        critic_tau,
         master_actor,
         master_critic,
-        training,tb_writer
+        training,
+        tb_writer,
+        model_saver,
+        model_save_path,
+        log_path
     ):
         self.sess = sess
         self.name = name
-        self.state = State(
-            goal=goal,
-            pose=init_pose.copy(),
-            obs_dim=360,
-            obs_seq_len=4
-        )
-        self.pre_state = State(
-            goal=goal,
-            pose=init_pose.copy(),
-            obs_dim=360,
-            obs_seq_len=4
-        )
-        self.action = np.zeros(
-            [1,1],
-            dtype=float
-        )  # yaw angular velocity
-        self.goal = goal  # [1,3]
+        self.goal = goal.copy()  # [1,3]
         self.init_pose = init_pose.copy()  # [[x,y,z,r,p,y]]
         self.episode = 0
+        self.epoch = 0
+        self.eprwd = 0
+        self.collided = False
         self.end_of_episode = False
         self.step = 0
         self.epoch = 0
-        self.epoch_max = 10
+        self.obs_dim = obs_dim
+        self.obs_seqlen = obs_seqlen
+        self.act_dim = act_dim
+        self.dir_dim = pos_dim
+        self.vel_dim = vel_dim
         self.max_step = 500
-        self.lvel = 10.0
+        self.max_lvel = 2.0
         self.max_avel = 3.141592654
-        self.training_batch_size = 256
+        self.training_batch_size = batch_size
         self.epslion = 1.0
         self.epslion_t = 0
-        self.ou_noise = 0;
-        self.lidar_res_h = 360
-        self.lidar_res_v = 1
-        self.lidar_view_h = 3.141592654
-        self.lidar_view_v = 3.141592654/180.0
+        self.ou_noise_av = 0
         self.lidar_max_range = 5.0
+        self.lidar_coll_dist = 0.25
+        
+        self.replay_buffer = ReplayBuffer(
+            max_size=100000,
+            dir_dim=self.dir_dim,
+            vel_dim=self.vel_dim,
+            obs_dim=self.obs_dim,
+            act_dim=self.act_dim,
+            obs_seqlen=self.obs_seqlen
+        )
+        self.min_repbuf_size = 500
+        
+        self.training = training
+        self.state = State(
+            goal=self.goal,
+            pose=self.init_pose,
+            obs_dim=self.obs_dim,
+            obs_seq_len=self.obs_seqlen,
+            vel_dim=self.vel_dim,
+            dir_dim=self.dir_dim,
+            obs_rmax=self.lidar_max_range,
+            coll_threash=self.lidar_coll_dist
+        )
+        self.pre_state = State(
+            goal=self.goal,
+            pose=self.init_pose,
+            obs_dim=self.obs_dim,
+            obs_seq_len=self.obs_seqlen,
+            vel_dim=self.vel_dim,
+            dir_dim=self.dir_dim,
+            obs_rmax=self.lidar_max_range,
+            coll_threash=self.lidar_coll_dist
+        )
+        self.action = np.zeros(
+            [1, self.act_dim],
+            dtype=float
+        )  
+        self.master_actor = master_actor
+        self.master_critic = master_critic
+        self.actor = ActorNetwork(
+            sess=sess,
+            name=self.name+"_actor",
+            time_step=self.obs_seqlen,
+            obs_dim=self.obs_dim,
+            vel_dim=self.vel_dim,
+            dir_dim=self.dir_dim,
+            act_dim=self.act_dim,
+            batch_size=self.training_batch_size, 
+            lstm_state_dim=actor_lstm_state_dim, 
+            n_fc1_unit=actor_fc1_unit, 
+            n_fc2_unit=actor_fc2_unit, 
+            learning_rate=actor_lr, 
+            tau=actor_tau,
+            training=self.training,
+            master_network=self.master_actor
+        )
+        self.critic = CriticNetwork(
+            sess=sess,
+            name=self.name+"_critic",
+            time_step=self.obs_seqlen,
+            obs_dim=self.obs_dim,
+            vel_dim=self.vel_dim,
+            dir_dim=self.dir_dim,
+            act_dim=self.act_dim,
+            batch_size=self.training_batch_size,
+            lstm_state_dim=critic_lstm_state_dim, 
+            n_fc1_unit=critic_fc1_unit, 
+            n_fc2_unit=critic_fc2_unit, 
+            learning_rate=critic_lr, 
+            tau=critic_tau,
+            training=self.training,
+            master_network=self.master_critic
+        )
+        self.env_worker = Thread(target=self.interact_with_environment)
+        self.train_worker = Thread(target=self.train)   
+        self.model_saver = model_saver
+        self.tb_writer = tb_writer
+        self.tb_eprwd_in = tf.placeholder(
+            dtype=tf.float32,
+            shape=()
+        )
+        self.tb_eprwd = tf.summary.scalar(
+            self.name+'_eprwd',
+            self.tb_eprwd_in
+        )
+        self.model_save_path = model_save_path
+        self.log_path = log_path
+        
         self.velcmd_pub = rospy.Publisher(
             "/"+self.name+"/cmd_vel", 
             Twist, 
-            queue_size=1000
+            queue_size=10
         )
         self.reset_pub = rospy.Publisher(
             "/"+self.name+"/reset", 
@@ -82,173 +178,134 @@ class Worker():
             Float32MultiArray,
             self.feedback_receiver
         )
-        self.training_rate = rospy.Rate(100)
-        self.replay_buffer = ReplayBuffer(100000)
-        self.min_repbuf_size = 2000
-        self.feedback_q = Queue.Queue(100)
-        self.training_q = Queue.Queue(100)
-        self.training = training
-        self.actor = ActorNetwork(
-            sess=sess,
-            name=self.name+"_actor",
-            time_step=self.state.obs_seq_len,
-            obs_dim=self.state.obs_dim,
-            vel_dim=self.state.vel_dim,
-            dir_dim=self.state.dir_dim,
-            batch_size=self.training_batch_size, 
-            lstm_state_dim=128, 
-            n_fc1_unit=1024, 
-            n_fc2_unit=1024, 
-            learning_rate=0.00001, 
-            tau=0.01,
-            training=training,
-            master_network=master_actor
-        )
-        self.critic = CriticNetwork(
-            sess=sess,
-            name=self.name+"_critic",
-            time_step=self.state.obs_seq_len,
-            obs_dim=self.state.obs_dim,
-            vel_dim=self.state.vel_dim,
-            dir_dim=self.state.dir_dim,
-            batch_size=self.training_batch_size,
-            lstm_state_dim=128, 
-            n_fc1_unit=1024, 
-            n_fc2_unit=1024, 
-            learning_rate=0.001, 
-            tau=0.01,
-            training=training,
-            master_network=master_critic
-        )
-        self.master_actor = master_actor
-        self.master_critic = master_critic
-        self.env_worker = Thread(target=self.interact_with_environment)
-        self.train_worker = Thread(target=self.train)   
-        self.tb_writer = tb_writer
+        self.feedback_q = Queue.Queue(10)
+        self.training_q = Queue.Queue(10)
+        self.training_rate = rospy.Rate(10)
+        self.log = open(self.log_path+self.name+'_'+datetime.datetime.now().strftime("%d-%m-%Y_%H:%M:%S")+'.txt','w+')
 
     def train(self):
-        if not self.training:
-            raise NameError(
-                "worker.train(): "
-                +"the worker is not "
-                + "in training mode..."
-            )
-            print("worker.train() is returned...")
-            return
         while not rospy.is_shutdown():
             try:
                 if self.training_q.qsize()>0:
                     sras=self.training_q.get(timeout=1)
                     self.replay_buffer.add(sras)
-                if self.replay_buffer.size()<self.min_repbuf_size:
-                    print(
-                        "train_worker: replay_buffer size: "
-                        + "%d/%d, epslion: %f"%(
-                            self.replay_buffer.size(),
-                            self.min_repbuf_size,
-                            self.epslion
-                            )
-                    )
-                    self.training_rate.sleep()
-                    continue
             except Queue.Empty as e:
-                print("train_worker: no transaction is received...")
-                break   
-            batch=self.replay_buffer.sample(
-                batch_size=self.training_batch_size
-            )
-            next_act=self.actor.predict_target(
-                obs_batch=batch['next_obs'],
-                vel_batch=batch['next_vel'],
-                dir_batch=batch['next_dir']
-            )
-            next_q=self.critic.predict_target(
-                obs_batch=batch['next_obs'],
-                vel_batch=batch['next_vel'],
-                dir_batch=batch['next_dir'],
-                act_batch=[next_act]
-            )
-            tar_q=batch['reward']+0.99*(next_q*(1-batch['terminal']))
-            self.critic.update_master_network(
-                obs_batch=batch['cur_obs'],
-                vel_batch=batch['cur_vel'],
-                dir_batch=batch['cur_dir'],
-                act_batch=batch['action'].reshape(
-                    (1,self.training_batch_size,1)
-                ),
-                tar_q_batch=tar_q[0]
-            )
-            act_out=self.actor.predict(
-                obs_batch=batch['cur_obs'],
-                vel_batch=batch['cur_vel'],
-                dir_batch=batch['cur_dir']
-            )
-            act_grads=self.critic.action_gradients(
-                obs_batch=batch['cur_obs'],
-                vel_batch=batch['cur_vel'],
-                dir_batch=batch['cur_dir'],
-                act_batch=[act_out]
-            )
-            self.actor.update_master_network(
-                obs_batch=batch['cur_obs'],
-                vel_batch=batch['cur_vel'],
-                dir_batch=batch['cur_dir'],
-                act_grads=act_grads[0]
-            )
-            self.actor.copy_master_network()
-            self.critic.copy_master_network()
-            self.actor.update_target_network()
-            self.critic.update_target_network()
-            self.training_rate.sleep()
-        print("%s train_worker: exits..."%(self.name))
+                raise NameError("train_worker: no transaction is received...")
 
+            if self.replay_buffer.size() < self.min_repbuf_size:
+                print("train_worker: replay_buffer size: "
+                    + "%d/%d"% (self.replay_buffer.size(),self.min_repbuf_size))
+            else:
+                batch=self.replay_buffer.sample(
+                    batch_size=self.training_batch_size
+                )
+                next_act=self.actor.predict_target(
+                    obs_batch=batch['next_obs'],
+                    dir_batch=batch['next_dir']
+                )
+                next_q=self.critic.predict_target(
+                    obs_batch=batch['next_obs'],
+                    dir_batch=batch['next_dir'],
+                    act_batch=[next_act]
+                )
+                tar_q=batch['reward']+0.99*(next_q*(1-batch['terminal']))
+                self.critic.update_master_network(
+                    obs_batch=batch['cur_obs'],
+                    dir_batch=batch['cur_dir'],
+                    act_batch=batch['action'],
+                    tar_q_batch=tar_q[0]
+                )
+                act_out=self.actor.predict(
+                    obs_batch=batch['cur_obs'],
+                    dir_batch=batch['cur_dir']
+                )
+                act_grads=self.critic.action_gradients(
+                    obs_batch=batch['cur_obs'],
+                    dir_batch=batch['cur_dir'],
+                    act_batch=[act_out]
+                )
+                self.actor.update_master_network(
+                    obs_batch=batch['cur_obs'],
+                    dir_batch=batch['cur_dir'],
+                    act_grads=act_grads[0]
+                )
+                
+                if (self.tb_writer and (self.name == "ardrone0") and (self.epoch % 10==0)):
+                    next_q=self.critic.predict_target(
+                        obs_batch=batch['next_obs'],
+                        dir_batch=batch['next_dir'],
+                        act_batch=[next_act]
+                    )
+                    tar_q=batch['reward']+0.99*(next_q*(1-batch['terminal']))
+                    tb_loss=self.critic.summary(
+                        obs_batch=batch['cur_obs'],
+                        dir_batch=batch['cur_dir'],
+                        act_batch=batch['action'],
+                        tar_q_batch=tar_q[0]
+                    )
+                    tb_pg=self.actor.summary(
+                        obs_batch=batch['cur_obs'],
+                        dir_batch=batch['cur_dir'],
+                        act_grads=act_grads[0]
+                    )
+                    self.tb_writer.add_summary(tb_loss[0], self.epoch)
+                    for g in tb_pg:
+                        self.tb_writer.add_summary(g, self.epoch)
+
+                self.epoch += 1
+                self.actor.copy_master_network()
+                self.critic.copy_master_network()
+                self.actor.update_target_network()
+                self.critic.update_target_network()
+            self.training_rate.sleep()
 
     def interact_with_environment(self):
-        rewards = 0;
-        ep_rwd_log = open(
-            './save/log/'
-            + self.name
-            + '_ep_rwd_train.csv','wb'
-        )
+        traj = ""
+        vel = ""
+        colldist = ""
         while not rospy.is_shutdown():
             self.actuate(self.action)
             try:
                 self.state.update(
-                    feedback=self.feedback_q.get(
-                        timeout=1.0
-                    ),
+                    feedback=self.feedback_q.get(timeout=1.0),
                     goal=self.goal
                 )
             except Queue.Empty:
                 print("no feedback is received...")
                 break
-            rwd,terminal = self.reward_model(self.state)
-            rewards += rwd  #calculate the episodic rewards
-            sars = {
-                    'cur_state':self.pre_state.clone(),
+            rwd, terminal = self.reward_model(self.state)
+            
+            self.eprwd += rwd 
+            traj += "%f;%f;"%(
+                self.state.pose[0][0], 
+                self.state.pose[0][1]
+            )
+            vel += "%f;%f;%f;%f;%f;%f;"%(
+                self.state.vel[0][0],
+                self.state.vel[0][1],
+                self.state.vel[0][2],
+                self.state.vel[0][3],
+                self.state.vel[0][4],
+                self.state.vel[0][5]
+            )
+            colldist += (str(self.state.get_collision_distance())+";")
+
+            sars = {'cur_state':self.pre_state.clone(),
                     'action':self.action.copy(),
                     'reward':rwd, 
                     'terminal':terminal,
-                    'next_state':self.state.clone()
-                }
+                    'next_state':self.state.clone()}
+
             self.training_q.put(sars)
-            self.pre_state.copy(self.state)#deepcopy
-            self.end_of_episode = terminal or self.step>self.max_step
+            self.pre_state.copy(self.state)  # deepcopy
+            self.end_of_episode = (terminal or (self.step > self.max_step))
             if not self.end_of_episode:
-                if self.replay_buffer.size()<self.min_repbuf_size:
-                    self.action[0][0] = rand.uniform(-1,1)
-                else:
-                    self.action = self.actor.predict(
-                        self.state.obs_in(),
-                        self.state.vel_in(),
-                        self.state.dir_in()
-                    )  # 1x1
-                    self.action[0][0] += self.ornstein_uhlenbeck_noise()
-                    if self.action[0][0]>1:
-                        self.action[0][0] = 1
-                    if self.action[0][0]<-1:
-                        self.action[0][0] = -1
-                self.step+=1
+                self.action = self.actor.predict(
+                    self.state.obs_in(),
+                    self.state.dir_in()
+                )
+                self.exploration_noise(self.action)
+                self.step += 1
             else:
                 self.reset_pose()
                 self.state.reset(
@@ -260,34 +317,42 @@ class Worker():
                     pose=self.init_pose.copy()
                 )
                 self.action = np.zeros(
-                    shape=[1,1],
+                    shape=[1,self.act_dim],
                     dtype=float
                 )
-                self.episode += 1#read by train()
+                print(self.name + '--------------------------')
+                print('episode:', self.episode)
+                print('eprwd:', self.eprwd)
+                print('step:', self.step)
+                print('collided: ', self.collided)
+                print('replay buffer size: ', self.replay_buffer.size())
+                self.log.write(str(self.episode) + ","
+                            + str(self.eprwd) + "," 
+                            + str(self.step) + ","
+                            + str(self.collided) + ","
+                            + traj + ","
+                            + vel + ","
+                            + colldist
+                            + "\n")
                 self.step = 0
-                ep_rwd_log.write(str(rewards)+'\n')
-                rewards = 0
+                self.eprwd = 0
+                self.episode += 1
+                traj = ""
+                vel = ""
+                colldist = ""
             self.training_rate.sleep()
-        ep_rwd_log.close()
         print("%s env_worker: exits..."%(self.name))
 
     def evaluate(self):
         if self.training:
-            raise NameError(
-                "worker.evaluate(): "
-                + "the worker is in "
-                +"training mode..."
-            )
+            raise NameError("worker.evaluate: the worker is in training mode...")
             return
-        succ = 0  # 0: not success, 1: success
-        ep_rwd = 0
-        loss = []
-        actions = []
-        traj = [self.init_pose.copy()[0]]
-        self.end_of_episode = False
+        traj = ""
+        vel = ""
+        colldist = ""
         self.step = 0
         self.action = np.zeros(
-            shape=[1,1],
+            shape=[1,self.act_dim],
             dtype=float
         )
         self.state.reset(
@@ -298,72 +363,86 @@ class Worker():
             goal=self.goal,
             pose=self.init_pose.copy()
         )
-        while not rospy.is_shutdown() and not self.end_of_episode:
+        while not rospy.is_shutdown():
             self.actuate(self.action)
-            actions.append(self.action[0][0])
             try:
                 self.state.update(
-                    feedback=self.feedback_q.get(
-                        timeout=1.0
-                    ),
+                    feedback=self.feedback_q.get(timeout=1.0),
                     goal=self.goal
                 )
             except Queue.Empty:
-                print("no feedback is received...")
-                break
-            rwd,terminal = self.reward_model(self.state)
-            sars={
-                    'cur_state':self.pre_state.clone(),
-                    'action':self.action.copy(),
-                    'reward':rwd, 
-                    'terminal':terminal,
-                    'next_state':self.state.clone()
-                }
-            self.pre_state.copy(self.state)
-            traj.append(self.state.pose[0].copy())
-            cur_q=self.critic.predict(
-                obs_batch=sars['cur_state'].obs_in(),
-                vel_batch=sars['cur_state'].vel_in(),
-                dir_batch=sars['cur_state'].dir_in(),
-                act_batch=sars['action'].reshape((1,1,1))
+                raise NameError("worker.evaluate: no feedback is received...")
+                
+            rwd, terminal = self.reward_model(self.state)
+
+            self.collided = (self.state.event == 1)
+            self.eprwd += rwd 
+            traj += "%f;%f;"%(
+                self.state.pose[0][0], 
+                self.state.pose[0][1]
             )
-            ep_rwd += rwd
-            self.end_of_episode = (terminal or self.step>self.max_step)
-            if not self.end_of_episode:
+            vel += "%f;%f;%f;%f;%f;%f;"%(
+                self.state.vel[0][0],
+                self.state.vel[0][1],
+                self.state.vel[0][2],
+                self.state.vel[0][3],
+                self.state.vel[0][4],
+                self.state.vel[0][5]
+            )
+            colldist += (str(self.state.get_collision_distance())+";")
+
+            self.pre_state.copy(self.state)
+
+            if (not terminal) and (self.step < self.max_step):
                 self.action = self.actor.predict(
                     self.state.obs_in(),
-                    self.state.vel_in(),
                     self.state.dir_in()
-                )  # 1x2
-                next_q = self.critic.predict_target(
-                    obs_batch=sars['next_state'].obs_in(),
-                    vel_batch=sars['next_state'].vel_in(),
-                    dir_batch=sars['next_state'].dir_in(),
-                    act_batch=[self.action]
                 )
-                tar_q = sars['reward']+0.99*(next_q[0][0]*(1-sars['terminal']))
-                loss.append((tar_q-cur_q[0][0])**2)
                 self.step += 1
             else:
                 self.reset_pose()
-                if rwd == 1:
-                    succ = 1
-                loss.append((rwd-cur_q[0][0])**2)
-            self.training_rate.sleep()
-        ttl_loss=0.0
-        for l in loss:
-            ttl_loss += l
-        avg_loss = ttl_loss if len(loss)==0 else ttl_loss/float(len(loss))
-        return ep_rwd, self.step, avg_loss, actions, traj, succ
+                tb_eprwd_sum = self.sess.run(
+                    self.tb_eprwd,
+                    feed_dict={self.tb_eprwd_in: self.eprwd}
+                )
+                self.tb_writer.add_summary(
+                    tb_eprwd_sum,
+                    self.episode
+                )
+                print(self.name + '--------------------------')
+                print('episode:', self.episode)
+                print('eprwd:', self.eprwd)
+                print('step:', self.step)
+                print('collided: ', self.collided)
+                print('replay buffer size: ', self.replay_buffer.size())
+                self.log.write(str(self.episode) + ","
+                            + str(self.eprwd) + "," 
+                            + str(self.step) + ","
+                            + str(self.collided) + ","
+                            + traj + ","
+                            + vel + ","
+                            + colldist
+                            + "\n")
+                self.step = 0
+                self.eprwd = 0
+                self.episode += 1
+                traj = ""
+                vel = ""
+                colldist = ""
+                if self.model_saver and (not self.collided) and terminal:
+                    self.model_saver.save(self.sess, self.model_save_path + "/"
+                        + datetime.datetime.now().strftime("%d-%m-%Y_%H:%M:%S") + "/"
+                        + "model")
+                break
 
-    def actuate(self,action):
+    def actuate(self, action):
         velcmd = Twist()
-        velcmd.linear.x = self.lvel
+        velcmd.linear.x = self.max_lvel
         velcmd.linear.y = 0.0
         velcmd.linear.z = 0.0
         velcmd.angular.x = 0.0
         velcmd.angular.y = 0.0
-        velcmd.angular.z = action[0][0]*self.max_avel
+        velcmd.angular.z = action[0][0] * self.max_avel
         self.velcmd_pub.publish(velcmd)
 
     def reward_model(self,state):
@@ -376,9 +455,23 @@ class Worker():
             cur_goal_dist = np.linalg.norm(
                 self.state.pose[0,0:3]-self.goal
             )
-            goal_rwd = max(0.0, pre_goal_dist-cur_goal_dist)
-            ossc_rwd = -0.05*np.linalg.norm(state.vel[0,3:6])
-            rwd = goal_rwd + ossc_rwd
+            # trvl_dist = np.linalg.norm(
+            #     self.state.pose[
+            #         0,
+            #         0:self.dir_dim
+            #     ]
+            #     - self.pre_state.pose[
+            #         0,
+            #         0:self.dir_dim
+            #     ]
+            # )
+            # coll_dist = self.state.get_collision_distance()
+
+            goal_rwd = (pre_goal_dist-cur_goal_dist)
+            # trvl_rwd = 0.01*trvl_dist
+            # coll_rwd = 0.0001/coll_dist
+
+            rwd = goal_rwd#-trvl_rwd-coll_rwd
             return rwd,False
         elif state.event==1:
             return -1.0,True
@@ -433,13 +526,18 @@ class Worker():
             rospy.signal_shutdown(
                 "training is completed..."
             )
+        self.log.close()
         self.env_worker.join()
         self.train_worker.join()
 
     def start(self):
+        self.actor.init_target_network() 
+        self.actor.copy_master_network()
+        self.critic.init_target_network() 
+        self.critic.copy_master_network()
         self.env_worker.start()
         self.train_worker.start()
-        return self.env_worker,self.train_worker
+        return self.env_worker, self.train_worker
 
     def epslion_greedy(self):
         self.epslion_t += 1
@@ -450,17 +548,22 @@ class Worker():
             )
         return rand.uniform(0,1)>self.epslion
 
-    def ornstein_uhlenbeck_noise(self):
+    def exploration_noise(self, action):
+        #angular velocity
+        action[0][0] += self.ornstein_uhlenbeck_noise_av();
+        action[0][0] = min(max(action[0][0],-1),1)
+
+    def ornstein_uhlenbeck_noise_av(self):
         sigma = 0.2  # Standard deviation.
         mu = 0.  # Mean.
         tau = .05  # Time constant.
         dt = .001  # Time step.
         sigma_bis = sigma * np.sqrt(2. / tau)
         sqrtdt = np.sqrt(dt)
-        self.ou_noise = (self.ou_noise
-                        + dt*(-(self.ou_noise-mu)/tau)
+        self.ou_noise_av = (self.ou_noise_av
+                        + dt*(-(self.ou_noise_av-mu)/tau)
                         + sigma_bis*sqrtdt*np.random.randn())
-        return self.ou_noise
+        return self.ou_noise_av
 
 
 

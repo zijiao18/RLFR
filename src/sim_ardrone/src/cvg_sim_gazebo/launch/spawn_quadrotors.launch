@@ -31,7 +31,7 @@
            respawn="false" output="screen"/>
 
     <node pkg="robot_state_publisher" type="state_publisher" name="robot_state_publisher_0" output="screen" >
-      <param name="publish_frequency" type="double" value="10.0" />
+      <param name="publish_frequency" type="double" value="50.0" />
       <param name="tf_prefix" value="ardrone0" />
     </node>
     <node name="ground_truth_to_tf_0" pkg="message_to_tf" type="message_to_tf" output="screen">
@@ -58,7 +58,7 @@
           respawn="false" output="screen"/>
      
     <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher_1" output="screen" >
-      <param name="publish_frequency" type="double" value="10.0" />
+      <param name="publish_frequency" type="double" value="50.0" />
       <param name="tf_prefix" value="ardrone1" />
     </node>
  
@@ -85,7 +85,7 @@
           respawn="false" output="screen"/>
  
     <node pkg="robot_state_publisher" type="state_publisher" name="robot_state_publisher_2" output="screen" >   
-      <param name="publish_frequency" type="double" value="10.0" />
+      <param name="publish_frequency" type="double" value="50.0" />
       <param name="tf_prefix" value="ardrone2"/>
     </node>
  
@@ -112,7 +112,7 @@
           respawn="false" output="screen"/>
  
     <node pkg="robot_state_publisher" type="state_publisher" name="robot_state_publisher_3" output="screen" >   
-      <param name="publish_frequency" type="double" value="10.0" />
+      <param name="publish_frequency" type="double" value="50.0" />
       <param name="tf_prefix" value="ardrone3"/>
     </node>
  

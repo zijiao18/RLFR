@@ -36,51 +36,23 @@ actor_lr = 0.0
 critic_lr = 0.0
 actor_tau = 0.0
 critic_tau = 0.0
-init_pose_c0 = np.array(
+init_pose_c0=np.array(
     [
-        [[0.0,1.5,0.0,0,0,-1.57]],
-        [[-1.5,0.0,0.0,0,0,0.0]],
-        [[1.5,0.0,0.0,0,0,3.14]]
+        [[1.5,0.0,0.0,0,0,-3.14]],
+        [[0.46352549156242118,1.4265847744427302,0.0,0,0,-1.9]],
+        [[-1.213525491562421,0.88167787843870982,0.0,0,0,-0.864785]],
+        [[-1.2135254915624214,-0.88167787843870959,0.0,0,0,0.785838]],
+        [[0.46352549156242084,-1.4265847744427305,0.0,0,0,2.010268]]
     ],
     dtype=float
 )
-init_pose_c1 = np.array(
+goals_c0=np.array(
     [
-        [[0.0,-4.5,0.0,0,0,-1.57]],
-        [[-1.5,-6.0,0.0,0,0,0.0]],
-        [[1.5,-6.0,0.0,0,0,3.14]]
-    ],
-    dtype=float
-)
-init_pose_c2 = np.array(
-    [
-        [[0.0,7.5,0.0,0,0,-1.57]],
-        [[-1.5,6.0,0.0,0,0,0.0]],
-        [[1.5,6.0,0.0,0,0,3.14]]
-    ],
-    dtype=float
-)
-goals_c0 = np.array(
-    [
-        [[0,-1.5]],
-        [[1.5,0.0]],
-        [[-1.5,0.0]]
-    ],
-    dtype=float
-)
-goals_c1 = np.array(
-    [
-        [[0,-7.5]],
-        [[1.5,-6.0]],
-        [[-1.5,-6.0]]
-    ],
-    dtype=float
-)
-goals_c2 = np.array(
-    [
-        [[0,4.5]],
-        [[1.5,6.0]],
-        [[-1.5,6.0]]
+        [[-1.5,0.0]],
+        [[-0.46352549156242134,-1.4265847744427302]],
+        [[1.213525491562421, -0.88167787843871004]],
+        [[1.2135254915624214, 0.88167787843870937]],
+        [[-0.46352549156242068, 1.4265847744427305]]
     ],
     dtype=float
 )
@@ -153,68 +125,6 @@ if __name__ == '__main__':
         master_critic=master_critic,
         training=False,
         rtoffset=0,
-        log_path=log_path,
-        model_save_path=model_save_path,
-        device='/device:GPU:0',
-        tb_writer=None,
-        model_saver=None
-    )
-    c1 = Coach(
-        sess=sess,
-        name="coach1",
-        initpose=init_pose_c1,
-        goals=goals_c1,
-        act_dim=act_dim,
-        pos_dim=pos_dim,
-        vel_dim=vel_dim,
-        lidar_dim=obs_dim,
-        lidar_seqlen=obs_seqlen,
-        batch_size=batch_size,
-        actor_lstm_state_dim=actor_lstm_state_dim, 
-        critic_lstm_state_dim=critic_lstm_state_dim,
-        actor_fc1_unit=actor_fc1_unit, 
-        actor_fc2_unit=actor_fc2_unit,
-        critic_fc1_unit=critic_fc1_unit, 
-        critic_fc2_unit=critic_fc2_unit,
-        actor_lr=actor_lr, 
-        critic_lr=critic_lr,
-        actor_tau=actor_tau,
-        critic_tau=critic_tau,
-        master_actor=master_actor,
-        master_critic=master_critic,
-        training=False,
-        rtoffset=3,
-        log_path=log_path,
-        model_save_path=model_save_path,
-        device='/device:GPU:0',
-        tb_writer=None,
-        model_saver=None
-    )
-    c2 = Coach(
-        sess=sess,
-        name="coach2",
-        initpose=init_pose_c2,
-        goals=goals_c2,
-        act_dim=act_dim,
-        pos_dim=pos_dim,
-        vel_dim=vel_dim,
-        lidar_dim=obs_dim,
-        lidar_seqlen=obs_seqlen,
-        batch_size=batch_size,
-        actor_lstm_state_dim=actor_lstm_state_dim, 
-        critic_lstm_state_dim=critic_lstm_state_dim,
-        actor_fc1_unit=actor_fc1_unit, 
-        actor_fc2_unit=actor_fc2_unit,
-        critic_fc1_unit=critic_fc1_unit, 
-        critic_fc2_unit=critic_fc2_unit, 
-        actor_lr=actor_lr, 
-        critic_lr=critic_lr,
-        actor_tau=actor_tau,
-        critic_tau=critic_tau,
-        master_actor=master_actor,
-        master_critic=master_critic,
-        training=False,
-        rtoffset=6,
         log_path=log_path,
         model_save_path=model_save_path,
         device='/device:GPU:0',
